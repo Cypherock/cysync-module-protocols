@@ -1,0 +1,39 @@
+@startuml
+autonumber
+actor Desktop
+actor Device
+
+==SEND TRANSACTIONS==
+
+autonumber
+Desktop-->Device: 29,XX
+note Left: Desktop APP sends ready\ncommand to device
+
+Device-->Desktop: 2A, READY/NOT_READY
+note Right: If device is ready then\nsend READY or NOT_READY
+
+Desktop-->Device: 34, [Wallet_id(32), TXN_META_DATA(...)]
+note Left: Desktop sends transaction\nmeta data
+
+Device-->Desktop: 35, OK/NOT_OK (Subject to change)
+note Right: Check meta_data / User verify coin \nIf xpub not found Display 'no coin found' on device
+
+Desktop-->Device: 36, [LEN_UNSIGNED_TXN(2),UNSIGNED_TXN(...)]
+note Left: Dekstop sends unsigned\ntxn
+
+Device-->Desktop: 35, OK/NOT_OK (Subject to change)
+note Right: User verify recipient address\nand amount on device
+
+Device-->Desktop: 36: OK/NOT_OK
+note Right: Now user will enter pin
+
+Device-->Desktop: 37: OK/NOT_OK
+note Right: Device sends that cards are\ntapped
+
+Device-->Desktop: 38: [LEN_SIGNED_TXN, SIGNED_TXN(...)]
+note Right: Device sends the signed signature
+
+Desktop-->Device: 2A, SUCCESS/FAILED
+note Left: Desktop sends confirmation
+
+@enduml

@@ -1,0 +1,34 @@
+@startuml
+autonumber
+actor Desktop
+actor Device
+
+==RECEIVE TRANSACTION==
+
+autonumber
+Desktop-->Device: 29,XX
+note Left: Desktop APP sends ready command to device
+
+Device-->Desktop: 2A, READY/NOT_READY
+note Right: If device is ready then send READY or NOT_READY
+
+Desktop-->Device: 34, [wallet_id(32),derivation_path(20))]
+note Left: Desktop app will send derivation path
+
+Device-->Desktop: 35, OK/NOT_OK (Subject to change)
+note Right: user accepts or rejects on device(Verify Coin)\nIf xpub not found Display 'no coin found' on device
+
+Device-->Desktop: 36: OK/NOT_OK
+note Right: Now user will enter pin and depending on correctness\n
+
+Device-->Desktop: 37,XX
+note Right: Device sends that cards are tapped
+
+Device-->Desktop: 38,OK/NOT_OK
+note Right: After User verified received address.
+note Left: Receipent adderss also displayed on Desktop
+
+Desktop-->Device: 2A, SUCCESS/FAILED
+note Left: Desktop sends confirmation
+
+@enduml

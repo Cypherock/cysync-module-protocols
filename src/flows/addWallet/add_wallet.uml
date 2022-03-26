@@ -1,0 +1,24 @@
+@startuml
+autonumber
+actor Desktop
+actor Device
+
+==ADD WALLET==
+
+autonumber
+Desktop-->Device: 29,XX
+note Left: Desktop APP sends ready command to device
+
+Device-->Desktop: 2A, READY/NOT_READY
+note Right: If device is ready then send Ready or Not Ready
+
+Desktop-->Device: 2B,XX
+note Left: Desktop sends Start Add Wallet command
+
+Device-->Desktop: 2C, Wallet_Details
+note Right: Device will send wallet details (wallet_name(16)+password_set(1)+ID(32))
+
+Desktop-->Device: 2A, Success/Fail
+note Left: Desktop will recieve commands and add it to the local DB and send back success command or fail command accordingly
+
+@enduml

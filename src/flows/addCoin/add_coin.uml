@@ -1,0 +1,33 @@
+@startuml
+autonumber
+actor Desktop
+actor Device
+
+==ADD COIN==
+
+autonumber
+Desktop-->Device: 29,XX
+note Left: Desktop APP sends ready command to device
+
+Device-->Desktop: 2A, READY/NOT_READY
+note Right: If device is ready then send OK or NOT_OK
+
+Desktop-->Device: 2D, Wallet_ID + [Coins]
+note Left: Desktop sends wallet Id for device user to confirm
+
+Device-->Desktop: 2E, OK/NOT_OK (Subject to change)
+note Right: Displays all selected coins on device user confirms\nthen device sends this packet
+
+Device-->Desktop: 2F: OK/NOT_OK
+note Right: Now user will enter pin and depending on correctness\n
+
+Device-->Desktop: 30,XX
+note Right: Device sends that cards are tapped
+
+Device-->Desktop: 31,[XPUBS]
+note Right: Device sends xpubs for all selected coins
+
+Desktop-->Device: 2A, SUCCESS/FAILED
+note Left: Desktop sends confirmation \n(XPubs added in db and flow completed)
+
+@enduml

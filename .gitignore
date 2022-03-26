@@ -1,0 +1,8 @@
+dist
+node_modules
+.idea
+db
+yarn-error.log
+communication
+cypherock-database-wrapper
+wallet
