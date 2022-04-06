@@ -3,7 +3,6 @@ import {
   receiveCommand,
   sendData
 } from '@cypherock/communication';
-import { DeviceDB } from '@cypherock/database';
 
 import {
   ALL_SUPPORTED_SDK_VERSIONS,
@@ -28,7 +27,7 @@ const formatSDKVersion = (version: string) => {
 };
 
 export interface GetDeviceInfoRunOptions extends CyFlowRunOptions {
-  deviceDB: DeviceDB;
+  deviceDbUtil: any;
 }
 
 export class GetDeviceInfo extends CyFlow {
@@ -36,7 +35,7 @@ export class GetDeviceInfo extends CyFlow {
     super();
   }
 
-  async run({ connection, deviceDB }: GetDeviceInfoRunOptions) {
+  async run({ connection, deviceDbUtil }: GetDeviceInfoRunOptions) {
     this.cancelled = false;
     let flowInterupted = false;
 
@@ -106,7 +105,10 @@ export class GetDeviceInfo extends CyFlow {
         const deviceSerial = (serial + '').toLowerCase();
         this.emit('serial', deviceSerial);
 
-        const dbDevice = await deviceDB.getBySerial(deviceSerial);
+        const dbDevice = await deviceDbUtil(
+          'getBySerial',
+          deviceSerial
+        );
 
         if (!dbDevice) {
           this.emit('isNew', true);
