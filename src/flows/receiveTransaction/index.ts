@@ -4,14 +4,13 @@ import {
   receiveCommand,
   sendData
 } from '@cypherock/communication';
-import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions } from '../index';
 
 export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
-  addressDB: AddressDB;
+  addressDbUtil: any;
   walletId: string;
   coinType: string;
   xpub: string;
@@ -28,7 +27,7 @@ export class TransactionReceiver extends CyFlow {
   async run({
     connection,
     packetVersion,
-    addressDB,
+    addressDbUtil,
     walletId,
     coinType,
     xpub,
@@ -50,13 +49,13 @@ export class TransactionReceiver extends CyFlow {
       }
 
       if (coin.isEth) {
-        wallet = newWallet({ coinType, xpub, zpub, addressDB });
+        wallet = newWallet({ coinType, xpub, zpub, addressDbUtil });
         receiveAddress = wallet.newReceiveAddress().toUpperCase();
         //To make the first x in lowercase
         receiveAddress = '0x' + receiveAddress.slice(2);
         receiveAddressPath = await wallet.getDerivationPath(contractAbbr);
       } else {
-        wallet = newWallet({ coinType, xpub, zpub, addressDB });
+        wallet = newWallet({ coinType, xpub, zpub, addressDbUtil });
         receiveAddress = await wallet.newReceiveAddress();
         receiveAddressPath = await wallet.getDerivationPath(receiveAddress);
       }
