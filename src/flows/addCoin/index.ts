@@ -1,11 +1,5 @@
-import {
-  receiveAnyCommand,
-  receiveCommand,
-  sendData
-} from '@cypherock/communication';
-
 import { logger } from '../../utils';
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 import { createCoinIndexes, formatCoinsForDB } from './helper';
 
@@ -35,7 +29,6 @@ export class CoinAdder extends CyFlow {
    */
   async run({
     connection,
-    packetVersion,
     walletId,
     selectedCoins,
     isResync,
@@ -52,22 +45,15 @@ export class CoinAdder extends CyFlow {
       const resyncIndex = isResync ? '01' : '00';
 
       if (ready) {
-        await sendData(
-          connection,
+        await connection.sendData(
           45,
-          walletId + resyncIndex + createCoinIndexes(selectedCoins),
-          packetVersion
+          walletId + resyncIndex + createCoinIndexes(selectedCoins)
         );
 
-        const data: any = await receiveAnyCommand(
-          connection,
-          [46, 75, 76],
-          packetVersion,
-          30000
-        );
+        const data = await connection.receiveData([46, 75, 76], 30000);
         if (data.commandType === 75) {
           this.emit('locked');
-          return;
+          throw new ExitFlowError();
         }
         if (data.commandType === 76) {
           if (data.data.startsWith('02')) {
@@ -77,27 +63,22 @@ export class CoinAdder extends CyFlow {
             // Wallet is in partial state
             this.emit('noWalletFound', true);
           }
-          return;
+          throw new ExitFlowError();
         }
-        const coinConfirmed: any = data.data;
+        const coinConfirmed = data.data;
         if (parseInt(coinConfirmed, 10)) {
           this.emit('coinsConfirmed', true);
         } else {
           this.emit('coinsConfirmed', false);
-          return;
+          throw new ExitFlowError();
         }
 
         if (passphraseExists) {
-          const passphraseData: any = await receiveAnyCommand(
-            connection,
-            [91, 90],
-            packetVersion,
-            90000
-          );
+          const passphraseData = await connection.receiveData([91, 90], 90000);
 
           if (passphraseData.commandType === 91) {
             this.emit('coinsConfirmed', false);
-            return;
+            throw new ExitFlowError();
           }
 
           if (!passphraseData.data.startsWith('01')) {
@@ -108,20 +89,15 @@ export class CoinAdder extends CyFlow {
         }
 
         if (pinExists) {
-          const pinData: any = await receiveAnyCommand(
-            connection,
-            [47, 79, 81],
-            packetVersion,
-            90000
-          );
+          const pinData = await connection.receiveData([47, 79, 81], 90000);
           if (pinData.commandType === 79) {
             this.emit('coinsConfirmed', false);
-            return;
+            throw new ExitFlowError();
           }
 
           if (pinData.commandType === 81) {
             this.emit('noWalletOnCard');
-            return;
+            throw new ExitFlowError();
           }
 
           const pinEntered = pinData.data;
@@ -129,49 +105,39 @@ export class CoinAdder extends CyFlow {
             this.emit('pinEntered', true);
           } else {
             this.emit('pinEntered', false);
-            return;
+            throw new ExitFlowError();
           }
         }
 
-        const data1: any = await receiveAnyCommand(
-          connection,
-          [48, 79, 81, 71],
-          packetVersion,
-          45000
-        );
+        const data1 = await connection.receiveData([48, 79, 81, 71], 45000);
         if (data1.commandType === 79) {
           this.emit('coinsConfirmed', false);
-          return;
+          throw new ExitFlowError();
         }
         if (data1.commandType === 81) {
           this.emit('noWalletOnCard');
-          return;
+          throw new ExitFlowError();
         }
         if (data1.commandType === 71) {
           this.emit('cardError');
-          return;
+          throw new ExitFlowError();
         }
 
         this.emit('cardTapped');
 
-        const xPubDetails: any = await receiveCommand(
-          connection,
-          49,
-          packetVersion,
-          60000
-        );
+        const xPubDetails = await connection.receiveData([49], 60000);
         if (!xPubDetails) {
           //I don't remember why I had put this condition.
           this.emit('unknownError');
           flowInterupted = true;
-          return;
+          throw new ExitFlowError();
         }
 
-        await sendData(connection, 42, '01', packetVersion);
+        await connection.sendData(42, '01');
         if (!isResync) {
           const xpubList = await formatCoinsForDB(
             walletId,
-            xPubDetails,
+            xPubDetails.data,
             selectedCoins
           );
           logger.debug('Xpub list', { xpubList });
@@ -183,10 +149,12 @@ export class CoinAdder extends CyFlow {
         this.emit('notReady');
       }
     } catch (e) {
-      flowInterupted = true;
-      this.emit('error', e);
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      await this.onEnd(connection, packetVersion, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }

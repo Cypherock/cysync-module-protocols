@@ -1,6 +1,4 @@
-import { receiveCommand, sendData } from '@cypherock/communication';
-
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 import { sleep, upgrade } from './helper';
 
@@ -17,12 +15,13 @@ export class DeviceUpdater extends CyFlow {
 
   async run({
     connection,
-    packetVersion,
     firmwareVersion,
     firmwarePath,
     inBootloaderMode = false
   }: DeviceUpdaterRunOptions) {
     this.cancelled = false;
+    let flowInterupted = false;
+
     try {
       if (!inBootloaderMode) {
         await this.onStart(connection);
@@ -30,41 +29,39 @@ export class DeviceUpdater extends CyFlow {
         const ready = await this.deviceReady(connection);
 
         if (ready) {
-          await sendData(connection, 77, firmwareVersion, packetVersion);
-          const updateConfirmed = await receiveCommand(
-            connection,
-            78,
-            packetVersion,
-            30000
-          );
+          await connection.sendData(77, firmwareVersion);
+          const updateConfirmed = await connection.receiveData([78]);
 
-          if (updateConfirmed === '01') {
+          if (updateConfirmed.data === '01') {
             this.emit('updateConfirmed', true);
-          } else if (updateConfirmed === '00') {
+          } else if (updateConfirmed.data === '00') {
             this.emit('updateConfirmed', false);
-            await this.closeConnection(connection);
-            return;
+            throw new ExitFlowError();
           } else {
             this.emit('error');
-            await this.closeConnection(connection);
-            return;
+            throw new ExitFlowError();
           }
 
           await sleep(3000);
         } else {
           this.emit('notReady');
-          return;
+          throw new ExitFlowError();
         }
       } else {
         this.emit('updateConfirmed', true);
       }
 
-      await upgrade(firmwarePath);
+      await upgrade(connection, firmwarePath);
       this.emit('completed');
     } catch (e) {
-      this.emit('error', e);
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      this.removeAllListeners();
+      await this.onEnd(connection, {
+        dontAbort: !flowInterupted
+      });
     }
   }
 }

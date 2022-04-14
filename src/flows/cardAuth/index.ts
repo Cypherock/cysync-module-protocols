@@ -1,11 +1,5 @@
-import {
-  receiveAnyCommand,
-  receiveCommand,
-  sendData
-} from '@cypherock/communication';
-
 import { logger } from '../../utils';
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 import {
   sha256,
@@ -26,7 +20,6 @@ export class CardAuthenticator extends CyFlow {
 
   async run({
     connection,
-    packetVersion,
     firmwareVersion,
     cardNumber = '00',
     isTestApp = false
@@ -40,34 +33,24 @@ export class CardAuthenticator extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        await sendData(connection, 70, cardNumber, packetVersion);
+        await connection.sendData(70, cardNumber);
 
-        const acceptedRequest: any = await receiveCommand(
-          connection,
-          70,
-          packetVersion,
-          30000
-        );
-        if (acceptedRequest === '00') {
+        const acceptedRequest = await connection.receiveData([70], 30000);
+        if (acceptedRequest.data === '00') {
           this.emit('acceptedRequest', false);
-          return;
+          throw new ExitFlowError();
         } else {
           this.emit('acceptedRequest', true);
         }
 
-        const receivedHash: any = await receiveAnyCommand(
-          connection,
-          [13, 70],
-          packetVersion,
-          30000
-        );
+        const receivedHash = await connection.receiveData([13, 70], 30000);
 
         if (
           receivedHash.commandType === 70 &&
           receivedHash.data.startsWith('00')
         ) {
           this.emit('cardError');
-          return;
+          throw new ExitFlowError();
         } else if (receivedHash.commandType !== 13) {
           throw new Error('Invalid command received');
         }
@@ -89,22 +72,17 @@ export class CardAuthenticator extends CyFlow {
 
         if (!challenge) {
           this.emit('verified', false);
-          await sendData(connection, 42, '00', packetVersion);
-          return;
+          await connection.sendData(42, '00');
+          throw new ExitFlowError();
         }
 
-        await sendData(connection, 16, challenge, packetVersion);
+        await connection.sendData(16, challenge);
 
-        const challengeHash: any = await receiveAnyCommand(
-          connection,
-          [17, 70],
-          packetVersion,
-          15000
-        );
+        const challengeHash = await connection.receiveData([17, 70], 15000);
 
         if (challengeHash.commandType === 70) {
           this.emit('cardError');
-          return;
+          throw new ExitFlowError();
         } else if (challengeHash.commandType !== 17) {
           throw new Error('Invalid command received');
         }
@@ -126,31 +104,28 @@ export class CardAuthenticator extends CyFlow {
         this.emit('verified', verified);
 
         if (verified) {
-          await sendData(connection, 42, '01', packetVersion);
+          await connection.sendData(42, '01');
         } else {
-          await sendData(connection, 42, '00', packetVersion);
+          await connection.sendData(42, '00');
         }
 
         if (isTestApp) {
-          const pairing: any = await receiveCommand(
-            connection,
-            70,
-            packetVersion,
-            15000
-          );
-          if (!pairing.startsWith('01')) {
+          const pairing = await connection.receiveData([70], 15000);
+          if (!pairing.data.startsWith('01')) {
             this.emit('pairingFailed');
-            return;
+            throw new ExitFlowError();
           }
         }
       } else {
         this.emit('notReady');
       }
     } catch (e) {
-      this.emit('error', e);
-      flowInterupted = true;
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      await this.onEnd(connection, packetVersion, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }

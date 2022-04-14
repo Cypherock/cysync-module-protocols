@@ -1,18 +1,11 @@
-import {
-  ALLCOINS,
-  COINS,
-  EthCoinData,
-  receiveAnyCommand,
-  receiveCommand,
-  sendData
-} from '@cypherock/communication';
+import { ALLCOINS, COINS, EthCoinData } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
 import { BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
 
 import { logger } from '../../utils';
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
   addressDB: AddressDB;
@@ -39,7 +32,6 @@ export class TransactionSender extends CyFlow {
 
   async run({
     connection,
-    packetVersion,
     addressDB,
     walletId,
     pinExists,
@@ -177,25 +169,14 @@ export class TransactionSender extends CyFlow {
           metaData,
           unsignedTransaction
         });
-        await sendData(
-          connection,
-          50,
-          walletId + metaData,
-          packetVersion,
-          undefined
-        );
+        await connection.sendData(50, walletId + metaData);
         this.emit('metadataSent');
 
-        const receivedData: any = await receiveAnyCommand(
-          connection,
-          [51, 75, 76],
-          packetVersion,
-          30000
-        );
+        const receivedData = await connection.receiveData([51, 75, 76], 30000);
         if (receivedData.commandType === 75) {
           logger.info('Wallet is locked');
           this.emit('locked');
-          return;
+          throw new ExitFlowError();
         }
         if (receivedData.commandType === 76) {
           logger.info('No such wallet exists on the device');
@@ -206,7 +187,7 @@ export class TransactionSender extends CyFlow {
             // Wallet is in partial state
             this.emit('noWalletFound', true);
           }
-          return;
+          throw new ExitFlowError();
         }
 
         const coinsConfirmed = receivedData.data.slice(0, 2);
@@ -216,14 +197,14 @@ export class TransactionSender extends CyFlow {
         if (acceptableTxnSize < unsignedTransaction.length) {
           this.emit('txnTooLarge');
           flowInterupted = true;
-          return;
+          throw new ExitFlowError();
         }
 
         if (coinsConfirmed === '01') {
           this.emit('coinsConfirmed', true);
         } else if (coinsConfirmed === '00') {
           this.emit('coinsConfirmed', false);
-          return;
+          throw new ExitFlowError();
         } else {
           throw new Error('Unidentified command from the device');
         }
@@ -232,66 +213,40 @@ export class TransactionSender extends CyFlow {
           logger.info('Insufficient funds.');
           this.emit('insufficientFunds', true);
           flowInterupted = true;
-          return;
+          throw new ExitFlowError();
         }
 
-        await sendData(
-          connection,
-          52,
-          unsignedTransaction,
-          packetVersion,
-          undefined
-        );
+        await connection.sendData(52, unsignedTransaction);
 
         if (!(coin instanceof EthCoinData)) {
-          const utxoRequest: any = await receiveCommand(
-            connection,
-            51,
-            packetVersion,
-            10000
-          );
-          if (utxoRequest !== '02') {
+          const utxoRequest = await connection.receiveData([51], 10000);
+          if (utxoRequest.data !== '02') {
             throw new Error('Invalid data from device');
           }
 
           for (const utxo of utxoList) {
-            await sendData(connection, 51, utxo, packetVersion);
-            const utxoResponse: any = await receiveCommand(
-              connection,
-              51,
-              packetVersion,
-              10000
-            );
-            if (utxoResponse.startsWith('00')) {
+            await connection.sendData(51, utxo);
+            const utxoResponse = await connection.receiveData([51], 10000);
+            if (utxoResponse.data.startsWith('00')) {
               throw new Error('UTXO was not verified');
             }
           }
         }
 
-        const recipientVerified: any = await receiveCommand(
-          connection,
-          53,
-          packetVersion,
-          120000
-        );
-        if (recipientVerified === '01') {
+        const recipientVerified = await connection.receiveData([53], 120000);
+        if (recipientVerified.data === '01') {
           this.emit('verified', true);
         } else {
-          this.emit('verified', parseInt(recipientVerified, 16));
-          return;
+          this.emit('verified', parseInt(recipientVerified.data, 16));
+          throw new ExitFlowError();
         }
 
         if (passphraseExists) {
-          const passphraseData: any = await receiveAnyCommand(
-            connection,
-            [91, 90],
-            packetVersion,
-            90000
-          );
+          const passphraseData = await connection.receiveData([91, 90], 90000);
 
           if (passphraseData.commandType === 91) {
             this.emit('coinsConfirmed', false);
-            return;
+            throw new ExitFlowError();
           }
 
           if (!passphraseData.data.startsWith('01')) {
@@ -302,19 +257,14 @@ export class TransactionSender extends CyFlow {
         }
 
         if (pinExists) {
-          const pinData: any = await receiveAnyCommand(
-            connection,
-            [47, 79, 81],
-            packetVersion,
-            90000
-          );
+          const pinData = await connection.receiveData([47, 79, 81], 90000);
           if (pinData.commandType === 79) {
             this.emit('coinsConfirmed', false);
-            return;
+            throw new ExitFlowError();
           }
           if (pinData.commandType === 81) {
             this.emit('noWalletOnCard');
-            return;
+            throw new ExitFlowError();
           }
           const pinEntered = pinData.data;
 
@@ -322,27 +272,22 @@ export class TransactionSender extends CyFlow {
             this.emit('pinEntered', true);
           } else {
             this.emit('pinEntered', false);
-            return;
+            throw new ExitFlowError();
           }
         }
 
-        const data1: any = await receiveAnyCommand(
-          connection,
-          [48, 79, 81, 71],
-          packetVersion,
-          45000
-        );
+        const data1 = await connection.receiveData([48, 79, 81, 71], 45000);
         if (data1.commandType === 79) {
           this.emit('coinsConfirmed', false);
-          return;
+          throw new ExitFlowError();
         }
         if (data1.commandType === 81) {
           this.emit('noWalletOnCard');
-          return;
+          throw new ExitFlowError();
         }
         if (data1.commandType === 71) {
           this.emit('cardError');
-          return;
+          throw new ExitFlowError();
         }
         this.emit('cardsTapped', true);
 
@@ -351,17 +296,12 @@ export class TransactionSender extends CyFlow {
             throw new Error('ETH Wallet found, but coin is not ETH.');
           }
 
-          const signedTxn: any = await receiveCommand(
-            connection,
-            54,
-            packetVersion,
-            90000
-          );
-          await sendData(connection, 42, '01', packetVersion);
+          const signedTxn = await connection.receiveData([54], 90000);
+          await connection.sendData(42, '01');
 
           const signedTxnEth = wallet.getSignedTransaction(
             unsignedTransaction,
-            signedTxn,
+            signedTxn.data,
             coin.chain
           );
 
@@ -381,14 +321,9 @@ export class TransactionSender extends CyFlow {
         } else {
           const inputSignatures: string[] = [];
           for (const _ of txnInfo.inputs) {
-            const inputSig: any = await receiveCommand(
-              connection,
-              54,
-              packetVersion,
-              90000
-            );
-            await sendData(connection, 42, '01', packetVersion);
-            inputSignatures.push(inputSig);
+            const inputSig = await connection.receiveData([54], 90000);
+            await connection.sendData(42, '01');
+            inputSignatures.push(inputSig.data);
           }
 
           const signedTxn = wallet.getSignedTransaction(
@@ -417,10 +352,12 @@ export class TransactionSender extends CyFlow {
         this.emit('notReady');
       }
     } catch (e) {
-      this.emit('error', e);
-      flowInterupted = true;
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      await this.onEnd(connection, packetVersion, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }
