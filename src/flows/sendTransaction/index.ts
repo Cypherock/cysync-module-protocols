@@ -77,6 +77,12 @@ export class TransactionSender extends CyFlow {
       }
 
       if (coin instanceof EthCoinData) {
+        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
+
+        if (!token) {
+          throw new Error('Invalid token or coinType');
+        }
+
         const { gasLimit, contractAddress, contractAbbr } = data;
         const { network, chain } = coin;
         wallet = new EthereumWallet(xpub, coin);
@@ -116,7 +122,7 @@ export class TransactionSender extends CyFlow {
           outputs
         } = unsignedResp);
         sendMaxAmount = amount
-          .dividedBy(new BigNumber(coin.multiplier))
+          .dividedBy(new BigNumber(token.multiplier))
           .toString();
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
@@ -433,7 +439,7 @@ export class TransactionSender extends CyFlow {
     outputList: Array<{ address: string; value?: BigNumber }>,
     fee: number,
     isSendAll?: boolean,
-    data = {
+    data: TransactionSenderRunOptions['data'] = {
       gasLimit: 21000,
       contractAddress: undefined,
       contractAbbr: undefined
@@ -475,7 +481,7 @@ export class TransactionSender extends CyFlow {
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
           .toString(10);
-        const token = ALLCOINS[data.contractAbbr || coinType];
+        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
 
         if (!token) {
           throw new Error('Invalid token or coinType');
