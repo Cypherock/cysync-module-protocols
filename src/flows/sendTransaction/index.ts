@@ -91,7 +91,9 @@ export class TransactionSender extends CyFlow {
           feeRate = fee;
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
-          const res = await Server.eth.transaction.getFees({ network });
+          const res = await Server.eth.transaction
+            .getFees({ network })
+            .request();
           // 1000000000 for fees in Gwei from wei
           feeRate = Math.round(res.data.result / 1000000000);
         }
@@ -133,7 +135,9 @@ export class TransactionSender extends CyFlow {
           feeRate = fee;
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
-          const res = await Server.bitcoin.transaction.getFees({ coinType });
+          const res = await Server.bitcoin.transaction
+            .getFees({ coinType })
+            .request();
           // divide by 1024 to make fees in sat/byte from sat/kilobyte
           feeRate = Math.round(res.data.medium_fee_per_kb / 1024);
         }
@@ -466,7 +470,9 @@ export class TransactionSender extends CyFlow {
           feeRate = fee;
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
-          const res = await Server.eth.transaction.getFees({ network });
+          const res = await Server.eth.transaction
+            .getFees({ network })
+            .request();
           // 1000000000 for fees in Gwei from wei
           feeRate = Math.round(res.data.result / 1000000000);
         }
@@ -502,7 +508,9 @@ export class TransactionSender extends CyFlow {
           feeRate = fee;
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
-          const res = await Server.bitcoin.transaction.getFees({ coinType });
+          const res = await Server.bitcoin.transaction
+            .getFees({ coinType })
+            .request();
           // divide by 1024 to make fees in sat/byte from sat/kilobyte
           feeRate = Math.round(res.data.medium_fee_per_kb / 1024);
         }

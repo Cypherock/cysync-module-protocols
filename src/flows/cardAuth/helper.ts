@@ -14,11 +14,13 @@ export const verifySerialSignature = async (
   signature: any,
   message: any
 ): Promise<string> => {
-  const res: any = await deviceServer.verify({
-    serial,
-    signature,
-    message
-  });
+  const res = await deviceServer
+    .verify({
+      serial,
+      signature,
+      message
+    })
+    .request();
   if (res.data.verified === true) {
     return res.data.challenge;
   } else {
@@ -33,12 +35,14 @@ export const verifyChallengeSignature = async (
   challenge: string,
   firmwareVersion: string
 ) => {
-  const res: any = await deviceServer.challenge({
-    serial,
-    signature,
-    challenge,
-    firmwareVersion
-  });
+  const res = await deviceServer
+    .challenge({
+      serial,
+      signature,
+      challenge,
+      firmwareVersion
+    })
+    .request();
 
   // Server replies false if not verified, and 'no device found' if there is no device with this serial number. and obviously true if verified.
   if (res.data.verified !== true) return false;
