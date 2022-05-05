@@ -1,8 +1,4 @@
-import {
-  PacketVersionMap,
-  receiveCommand,
-  sendData
-} from '@cypherock/communication';
+import { PacketVersionMap } from '@cypherock/communication';
 import { DeviceDB } from '@cypherock/database';
 
 import {
@@ -11,9 +7,7 @@ import {
   OLDEST_SUPPORTED_SDK_VERSION
 } from '../../config';
 import logger from '../../utils/logger';
-import { CyFlow, CyFlowRunOptions } from '../index';
-
-import { getPacketVersion } from './helper';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 const formatSDKVersion = (version: string) => {
   if (version.length < 12) {
@@ -43,28 +37,20 @@ export class GetDeviceInfo extends CyFlow {
     try {
       await this.onStart(connection);
 
-      const packetVersion = await getPacketVersion(connection);
-      if (!packetVersion) {
-        throw new Error('No packet version is working with this device.');
-      }
+      const packetVersion = await connection.selectPacketVersion();
 
       logger.info('Working packet version', { packetVersion });
-      this.emit('packetVersion', packetVersion);
 
-      const ready = await this.deviceReady(connection, packetVersion);
+      const ready = await this.deviceReady(connection);
 
       if (ready) {
         // If the packet version is `v1`, then the sdk version will default to `0.0.0`
         let sdkVersion = '0.0.0';
         if (packetVersion !== PacketVersionMap.v1) {
-          await sendData(connection, 88, '00', packetVersion);
-          const sdkVersionData: any = await receiveCommand(
-            connection,
-            88,
-            packetVersion
-          );
+          await connection.sendData(88, '00');
+          const sdkVersionData = await connection.receiveData([88]);
 
-          sdkVersion = formatSDKVersion(sdkVersionData);
+          sdkVersion = formatSDKVersion(sdkVersionData.data);
         }
 
         this.emit('sdkVersion', sdkVersion);
@@ -82,21 +68,21 @@ export class GetDeviceInfo extends CyFlow {
           } else {
             this.emit('sdkNotSupported');
           }
-          return;
+          throw new Error('SDK not supported');
         }
 
-        await sendData(connection, 87, '00', packetVersion);
-        const data: any = await receiveCommand(connection, 87, packetVersion);
-        const isAuthenticated = data.slice(0, 2);
-        const serial = data.slice(2, 64 + 2);
-        const firmwareVersion = data.slice(64 + 2, 64 + 2 + 8);
+        await connection.sendData(87, '00');
+        const data = await connection.receiveData([87]);
+        const isAuthenticated = data.data.slice(0, 2);
+        const serial = data.data.slice(2, 64 + 2);
+        const firmwareVersion = data.data.slice(64 + 2, 64 + 2 + 8);
 
         const firmwareV = (firmwareVersion + '').toLowerCase();
         this.emit('firmwareVersion', firmwareV);
 
         if (isAuthenticated === '00') {
           this.emit('auth', false);
-          return;
+          throw new ExitFlowError();
         }
 
         if (serial.search(/[^0]/) === -1) {
@@ -111,7 +97,7 @@ export class GetDeviceInfo extends CyFlow {
         if (!dbDevice) {
           this.emit('isNew', true);
           this.emit('auth', false);
-          return;
+          throw new ExitFlowError();
         }
 
         if (dbDevice.isAuth) {
@@ -125,10 +111,12 @@ export class GetDeviceInfo extends CyFlow {
         this.emit('notReady');
       }
     } catch (e) {
-      this.emit('error', e);
-      flowInterupted = true;
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      await this.onEnd(connection, PacketVersionMap.v1, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }

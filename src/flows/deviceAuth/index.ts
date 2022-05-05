@@ -1,11 +1,5 @@
-import {
-  receiveAnyCommand,
-  receiveCommand,
-  sendData
-} from '@cypherock/communication';
-
 import { logger } from '../../utils';
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 import { verifyChallengeSignature, verifySerialSignature } from './helper';
 
@@ -22,7 +16,6 @@ export class DeviceAuthenticator extends CyFlow {
 
   async run({
     connection,
-    packetVersion,
     firmwareVersion,
     mockAuth,
     inTestApp
@@ -36,17 +29,12 @@ export class DeviceAuthenticator extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        await sendData(connection, 83, '01', packetVersion);
-        const data: any = await receiveAnyCommand(
-          connection,
-          [85, 83],
-          packetVersion,
-          30000
-        );
+        await connection.sendData(83, '01');
+        const data = await connection.receiveData([85, 83], 30000);
 
         if (data.commandType === 83) {
           this.emit('confirmed', false);
-          return;
+          throw new ExitFlowError();
         }
 
         this.emit('confirmed', true);
@@ -91,30 +79,25 @@ export class DeviceAuthenticator extends CyFlow {
 
         if (!challenge) {
           this.emit('verified', false);
-          await sendData(connection, 83, '04', packetVersion);
-          return;
+          await connection.sendData(83, '04');
+          throw new ExitFlowError();
         }
 
-        await sendData(connection, 83, '02' + challenge, packetVersion);
+        await connection.sendData(83, '02' + challenge);
 
-        const challengeHash: any = await receiveCommand(
-          connection,
-          86,
-          packetVersion,
-          10000
-        );
+        const challengeHash = await connection.receiveData([86], 10000);
 
         let challengeSignature: string;
         let challengePostfix1: string | undefined;
         let challengePostfix2: string | undefined;
 
-        if (challengeHash.length > 128) {
-          challengePostfix1 = challengeHash.slice(0, 14); // 7 byte
-          challengePostfix2 = challengeHash.slice(14, 60); // 23 byte
+        if (challengeHash.data.length > 128) {
+          challengePostfix1 = challengeHash.data.slice(0, 14); // 7 byte
+          challengePostfix2 = challengeHash.data.slice(14, 60); // 23 byte
 
-          challengeSignature = challengeHash.slice(60, 188).toUpperCase(); // 64 byte
+          challengeSignature = challengeHash.data.slice(60, 188).toUpperCase(); // 64 byte
         } else {
-          challengeSignature = challengeHash.slice(0, 128);
+          challengeSignature = challengeHash.data.slice(0, 128);
         }
 
         logger.info('Challenge data', {
@@ -140,9 +123,9 @@ export class DeviceAuthenticator extends CyFlow {
         }
 
         if (verified) {
-          await sendData(connection, 83, '03', packetVersion);
+          await connection.sendData(83, '03');
         } else {
-          await sendData(connection, 83, '04', packetVersion);
+          await connection.sendData(83, '04');
         }
 
         this.emit('verified', verified);
@@ -150,10 +133,12 @@ export class DeviceAuthenticator extends CyFlow {
         this.emit('notReady');
       }
     } catch (e) {
-      this.emit('error', e);
-      flowInterupted = true;
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      await this.onEnd(connection, packetVersion, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }

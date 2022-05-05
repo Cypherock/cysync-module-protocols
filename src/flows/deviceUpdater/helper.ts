@@ -1,8 +1,7 @@
-import { createPort, stmUpdateSendData } from '@cypherock/communication';
+import { createPort, DeviceConnection } from '@cypherock/communication';
 import fs from 'fs';
 
 import { logger } from '../../utils';
-import { connectionOpen } from '../../utils/connection';
 
 export function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -10,7 +9,10 @@ export function sleep(ms: number) {
 
 const MAX_RETRIES = 3;
 
-export async function upgrade(input: string): Promise<void> {
+export async function upgrade(
+  prevConnection: DeviceConnection,
+  input: string
+): Promise<void> {
   return new Promise(async (resolve, reject) => {
     logger.info('Updating device...');
     fs.readFile(input, async (error, data) => {
@@ -24,14 +26,27 @@ export async function upgrade(input: string): Promise<void> {
       let retries = 1;
       let errorMsg: Error | undefined;
 
+      let connection: DeviceConnection | undefined;
+      if (prevConnection.inBootloader) {
+        connection = prevConnection;
+      }
+
       while (!isCompleted && retries <= MAX_RETRIES) {
         try {
-          const { connection } = await createPort();
+          if (!connection) {
+            ({ connection } = await createPort());
+          }
 
-          await connectionOpen(connection);
-          await stmUpdateSendData(connection, data.toString('hex'));
+          if (!connection.inBootloader) {
+            throw new Error('Device not in bootloader mode');
+          }
+
+          await connection.beforeOperation();
+          await connection.sendStmData(data.toString('hex'));
+          connection.afterOperation();
 
           isCompleted = true;
+          connection.destroy();
           resolve();
         } catch (error) {
           retries += 1;
@@ -53,6 +68,9 @@ export async function upgrade(input: string): Promise<void> {
       }
 
       if (!isCompleted) {
+        if (connection) {
+          connection.destroy();
+        }
         reject(errorMsg);
         return;
       }
