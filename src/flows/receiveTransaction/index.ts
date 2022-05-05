@@ -1,14 +1,9 @@
-import {
-  COINS,
-  receiveAnyCommand,
-  receiveCommand,
-  sendData
-} from '@cypherock/communication';
+import { COINS } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
 import { logger } from '../../utils';
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
   addressDB: AddressDB;
@@ -27,7 +22,6 @@ export class TransactionReceiver extends CyFlow {
 
   async run({
     connection,
-    packetVersion,
     addressDB,
     walletId,
     coinType,
@@ -73,23 +67,13 @@ export class TransactionReceiver extends CyFlow {
           walletId
         });
 
-        await sendData(
-          connection,
-          59,
-          walletId + receiveAddressPath,
-          packetVersion
-        );
+        await connection.sendData(59, walletId + receiveAddressPath);
 
         this.emit('derivationPathSent');
-        const data: any = await receiveAnyCommand(
-          connection,
-          [63, 65, 75, 76],
-          packetVersion,
-          30000
-        );
+        const data = await connection.receiveData([63, 65, 75, 76], 30000);
         if (data.commandType === 75) {
           this.emit('locked');
-          return;
+          throw new ExitFlowError();
         }
         if (data.commandType === 76) {
           if (data.data.startsWith('02')) {
@@ -99,33 +83,28 @@ export class TransactionReceiver extends CyFlow {
             // Wallet is in partial state
             this.emit('noWalletFound', true);
           }
-          return;
+          throw new ExitFlowError();
         }
         if (data.commandType === 63 && data.data === '00') {
           this.emit('coinsConfirmed', false);
-          return;
+          throw new ExitFlowError();
         }
 
         if (data.commandType === 65 && data.data === '01') {
           this.emit('coinsConfirmed', true);
         } else if (data.commandType === 65 && data.data === '00') {
           this.emit('noXpub');
-          return;
+          throw new ExitFlowError();
         } else {
           throw new Error('Invalid data received');
         }
 
         if (passphraseExists) {
-          const passphraseData: any = await receiveAnyCommand(
-            connection,
-            [91, 90],
-            packetVersion,
-            90000
-          );
+          const passphraseData = await connection.receiveData([91, 90], 90000);
 
           if (passphraseData.commandType === 91) {
             this.emit('coinsConfirmed', false);
-            return;
+            throw new ExitFlowError();
           }
 
           if (!passphraseData.data.startsWith('01')) {
@@ -135,24 +114,19 @@ export class TransactionReceiver extends CyFlow {
           this.emit('passphraseEntered');
         }
 
-        const pinData: any = await receiveAnyCommand(
-          connection,
-          [79, 47, 81, 71],
-          packetVersion,
-          90000
-        );
+        const pinData = await connection.receiveData([79, 47, 81, 71], 90000);
 
         if (pinData.commandType === 79) {
           this.emit('coinsConfirmed', false);
-          return;
+          throw new ExitFlowError();
         }
         if (pinData.commandType === 81) {
           this.emit('noWalletOnCard');
-          return;
+          throw new ExitFlowError();
         }
         if (pinData.commandType === 71) {
           this.emit('cardError');
-          return;
+          throw new ExitFlowError();
         }
 
         // Pin entered or card tapped in case of no pin.
@@ -161,18 +135,13 @@ export class TransactionReceiver extends CyFlow {
           this.emit('pinEntered', true);
         } else {
           this.emit('pinEntered', false);
-          return;
+          throw new ExitFlowError();
         }
 
         this.emit('receiveAddress', receiveAddress);
-        const addressesVerified: any = await receiveCommand(
-          connection,
-          64,
-          packetVersion,
-          60000
-        );
-        if (addressesVerified.startsWith('01')) {
-          const addressHex = addressesVerified.slice(2);
+        const addressesVerified = await connection.receiveData([64], 60000);
+        if (addressesVerified.data.startsWith('01')) {
+          const addressHex = addressesVerified.data.slice(2);
           let address = '';
 
           if (coin.isEth) {
@@ -182,23 +151,24 @@ export class TransactionReceiver extends CyFlow {
           }
 
           this.emit('addressVerified', address);
-        } else if (addressesVerified === '00') {
+        } else if (addressesVerified.data === '00') {
           this.emit('addressVerified', false);
-          return;
+          throw new ExitFlowError();
         } else {
-          this.emit('internalError');
-          return;
+          throw new Error('Invalid command');
         }
 
-        await sendData(connection, 42, '01', packetVersion);
+        await connection.sendData(42, '01');
       } else {
         this.emit('notReady');
       }
     } catch (e) {
-      this.emit('error', e);
-      flowInterupted = true;
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      await this.onEnd(connection, packetVersion, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }

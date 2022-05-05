@@ -7,7 +7,7 @@ export class CancelFlow extends CyFlow {
     super();
   }
 
-  async run({ connection, packetVersion }: CancelFlowRunOptions) {
-    return await this.cancel(connection, packetVersion);
+  async run({ connection }: CancelFlowRunOptions) {
+    return await this.cancel(connection);
   }
 }

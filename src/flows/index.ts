@@ -1,19 +1,12 @@
-import {
-  PacketVersion,
-  PacketVersionMap,
-  receiveCommand,
-  sendData
-} from '@cypherock/communication';
+export * from './error';
+import { DeviceConnection } from '@cypherock/communication';
 import { EventEmitter } from 'events';
-import SerialPort from 'serialport';
 
 import { logger } from '../utils';
-import { connectionClose, connectionOpen } from '../utils/connection';
 
 export interface CyFlowRunOptions {
-  connection: SerialPort;
+  connection: DeviceConnection;
   sdkVersion: string;
-  packetVersion: PacketVersion;
 }
 
 /**
@@ -40,28 +33,18 @@ export abstract class CyFlow extends EventEmitter {
     // To be overloaded by interiting classes
   }
 
-  /**
-   * Helper function to open port
-   */
-  async openConnection(connection: SerialPort) {
-    await connectionOpen(connection);
-    this.emit('connectionOpen');
-  }
-
-  async deviceReady(
-    connection: SerialPort,
-    version: PacketVersion = PacketVersionMap.v1
-  ) {
+  async deviceReady(connection: DeviceConnection) {
     return new Promise(async (resolve, reject) => {
       try {
         if (!connection.isOpen) {
           throw new Error('Connection was not open');
         }
 
-        await sendData(connection, 41, '00', version, 2);
-        receiveCommand(connection, 42, version, 2000)
-          .then((deviceResponse: any) => {
-            resolve(String(deviceResponse).slice(0, 2) === '02');
+        await connection.sendData(41, '00', 2);
+        connection
+          .receiveData([42], 2000)
+          .then(deviceResponse => {
+            resolve(String(deviceResponse.data).slice(0, 2) === '02');
           })
           .catch(error => {
             if (error) {
@@ -81,8 +64,8 @@ export abstract class CyFlow extends EventEmitter {
    * NOTE: Using `connection.removeAllListeners` is preventing any further
    * listeners from being fired.
    */
-  removeConnectionListeners(connection: SerialPort) {
-    for (const event of ['close', 'data']) {
+  removeConnectionListeners(connection: DeviceConnection) {
+    for (const event of ['close', 'data', 'ack']) {
       const allListeners = connection.listeners(event);
       for (const listener of allListeners) {
         connection.removeListener(event, listener as () => void);
@@ -90,36 +73,25 @@ export abstract class CyFlow extends EventEmitter {
     }
   }
 
-  /**
-   * Helper function to close port
-   */
-  async closeConnection(connection: SerialPort) {
-    await connectionClose(connection);
-    this.removeConnectionListeners(connection);
-
-    this.emit('connectionClose');
-  }
-
-  async onStart(connection: SerialPort) {
-    await this.openConnection(connection);
+  async onStart(connection: DeviceConnection) {
+    await connection.beforeOperation();
   }
 
   async onEnd(
-    connection: SerialPort,
-    version: PacketVersion,
+    connection: DeviceConnection,
     options?: { dontRemoveListeners?: boolean; dontAbort?: boolean }
   ) {
     try {
       try {
         if (!(options && options.dontAbort)) {
-          await this.cancel(connection, version);
+          await this.cancel(connection);
         }
       } catch (error) {
         logger.error('Error on cancel flow');
         logger.error(error);
       }
 
-      await this.closeConnection(connection);
+      await connection.afterOperation();
 
       if (options && options.dontRemoveListeners) {
         return;
@@ -136,22 +108,23 @@ export abstract class CyFlow extends EventEmitter {
    * cancels the current flow by sending an abort command and closing the connection
    * @param connection - the serialport connection instance
    */
-  async cancel(
-    connection: SerialPort,
-    version: PacketVersion
-  ): Promise<boolean> {
+  async cancel(connection: DeviceConnection): Promise<boolean> {
     return new Promise((resolve, reject) => {
       this.cancelled = true;
-      if (connection && connection.isOpen) {
-        sendData(connection, 42, '04', version)
+      if (connection && connection.isOpen()) {
+        connection
+          .sendData(42, '04')
           .then(() => {
             logger.info('Desktop sent abort command');
 
             // Closing connection will cause the `run` function to result in an error.
-            this.closeConnection(connection);
+            connection.afterOperation();
             resolve(true);
           })
-          .catch(e => reject(e));
+          .catch(e => {
+            connection.afterOperation();
+            reject(e);
+          });
       } else {
         resolve(false);
       }

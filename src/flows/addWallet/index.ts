@@ -1,7 +1,5 @@
-import { receiveAnyCommand, sendData } from '@cypherock/communication';
-
 import { logger } from '../../utils';
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 import { extractWalletDetails } from './helper';
 
@@ -24,7 +22,7 @@ export class WalletAdder extends CyFlow {
    * this function runs the complete add wallet flow. the diagram can be found in the repo at src/flows/addWallet/add_wallet.uml
    * @param connection - the serialport connection instance.
    */
-  async run({ connection, packetVersion }: WalletAdderRunOptions) {
+  async run({ connection }: WalletAdderRunOptions) {
     this.cancelled = false;
     let flowInterupted = false;
 
@@ -34,14 +32,9 @@ export class WalletAdder extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        await sendData(connection, 43, '00', packetVersion);
+        await connection.sendData(43, '00');
 
-        const data: any = await receiveAnyCommand(
-          connection,
-          [44, 76],
-          packetVersion,
-          30000
-        );
+        const data = await connection.receiveData([44, 76], 30000);
         if (data.commandType === 76) {
           if (data.data.startsWith('00')) {
             // No Wallet exist
@@ -50,28 +43,30 @@ export class WalletAdder extends CyFlow {
             // All exisiting wallets are in partial state
             this.emit('noWalletFound', true);
           }
-          return;
+          throw new ExitFlowError();
         }
 
-        const rawWalletDetails: any = data.data;
+        const rawWalletDetails = data.data;
         if (rawWalletDetails === '00') {
           this.emit('walletDetails', null);
-          return;
+          throw new ExitFlowError();
         }
 
         const walletDetails = extractWalletDetails(rawWalletDetails);
         logger.info('Wallet Details', { walletDetails });
         this.emit('walletDetails', walletDetails);
 
-        await sendData(connection, 42, '01', packetVersion);
+        await connection.sendData(42, '01');
       } else {
         this.emit('notReady');
       }
     } catch (e) {
-      flowInterupted = true;
-      this.emit('error', e);
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
-      await this.onEnd(connection, packetVersion, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }

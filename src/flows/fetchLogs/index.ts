@@ -1,7 +1,7 @@
-import { hexToAscii, receiveCommand, sendData } from '@cypherock/communication';
+import { hexToAscii } from '@cypherock/communication';
 import fs from 'fs';
 
-import { CyFlow, CyFlowRunOptions } from '../index';
+import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface LogsFetcherRunOptions extends CyFlowRunOptions {
   firmwareVersion: string;
@@ -12,11 +12,7 @@ export class LogsFetcher extends CyFlow {
     super();
   }
 
-  async run({
-    connection,
-    packetVersion,
-    firmwareVersion
-  }: LogsFetcherRunOptions) {
+  async run({ connection, firmwareVersion }: LogsFetcherRunOptions) {
     let flowInterupted = false;
     this.cancelled = false;
     const filePath = process.env.userDataPath
@@ -33,32 +29,28 @@ export class LogsFetcher extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        await sendData(connection, 37, '00', packetVersion);
+        await connection.sendData(37, '00');
 
-        const acceptedRequest: any = await receiveCommand(
-          connection,
-          37,
-          packetVersion,
-          30000
-        );
-        if (acceptedRequest === '02') {
+        const acceptedRequest = await connection.receiveData([37], 30000);
+        if (acceptedRequest.data === '02') {
           this.emit('loggingDisabled');
-          return;
+          throw new ExitFlowError();
         }
 
-        if (acceptedRequest !== '01') {
+        if (acceptedRequest.data !== '01') {
           this.emit('acceptedRequest', false);
-          return;
+          throw new ExitFlowError();
         }
 
         this.emit('acceptedRequest', true);
-        await sendData(connection, 38, '00', packetVersion);
+        await connection.sendData(38, '00');
 
         let data: any = '';
-        let rawData: any;
+        let rawData: string = '';
         //end of packet in hex with carrige return and line feed.
         while (rawData !== '656e646f667061636b65740d0a') {
-          rawData = await receiveCommand(connection, 38, packetVersion, 2000);
+          const resp = await connection.receiveData([38], 2000);
+          rawData = resp.data;
           data = hexToAscii(rawData);
           stream.write(data);
         }
@@ -67,11 +59,13 @@ export class LogsFetcher extends CyFlow {
         this.emit('notReady');
       }
     } catch (e) {
-      this.emit('error', e);
-      flowInterupted = true;
+      if (!(e instanceof ExitFlowError)) {
+        flowInterupted = true;
+        this.emit('error', e);
+      }
     } finally {
       stream.end();
-      await this.onEnd(connection, packetVersion, {
+      await this.onEnd(connection, {
         dontAbort: !flowInterupted
       });
     }

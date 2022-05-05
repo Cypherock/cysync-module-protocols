@@ -1,6 +1,6 @@
 {
   "name": "@cypherock/protocols",
-  "version": "3.0.1-beta.20",
+  "version": "3.0.1-beta.21",
   "description": "Communication protocols for the cypherock x1 wallet",
   "main": "dist/app.js",
   "types": "dist/app.d.ts",
@@ -15,10 +15,10 @@
   "author": "Cypherock",
   "license": "AGPL-3.0",
   "dependencies": {
-    "@cypherock/communication": "3.0.1-beta.14",
-    "@cypherock/database": "3.0.1-beta.13",
+    "@cypherock/communication": "3.0.1-beta.15",
+    "@cypherock/database": "3.0.1-beta.14",
     "@cypherock/server-wrapper": "1.0.1-beta.8",
-    "@cypherock/wallet": "3.0.1-beta.17",
+    "@cypherock/wallet": "3.0.1-beta.18",
     "@types/bignumber.js": "^5.0.0",
     "bignumber.js": "^9.0.2",
     "winston": "^3.5.1"
