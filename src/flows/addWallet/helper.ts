@@ -35,5 +35,5 @@ export const extractWalletDetails = (rawData: any) => {
   }
 
   const walletId: string = String(rawData).slice(34);
-  return { walletId, name, passwordSet, passphraseSet };
+  return { id: walletId, name, passwordSet, passphraseSet };
 };
