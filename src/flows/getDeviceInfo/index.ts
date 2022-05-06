@@ -1,5 +1,5 @@
 import { PacketVersionMap } from '@cypherock/communication';
-import { DeviceDB } from '@cypherock/database';
+import { DeviceDb2 } from '@cypherock/database';
 
 import {
   ALL_SUPPORTED_SDK_VERSIONS,
@@ -22,7 +22,7 @@ const formatSDKVersion = (version: string) => {
 };
 
 export interface GetDeviceInfoRunOptions extends CyFlowRunOptions {
-  deviceDB: DeviceDB;
+  deviceDB: DeviceDb2;
 }
 
 export class GetDeviceInfo extends CyFlow {
@@ -92,7 +92,7 @@ export class GetDeviceInfo extends CyFlow {
         const deviceSerial = (serial + '').toLowerCase();
         this.emit('serial', deviceSerial);
 
-        const dbDevice = await deviceDB.getBySerial(deviceSerial);
+        const dbDevice = await deviceDB.get(deviceSerial);
 
         if (!dbDevice) {
           this.emit('isNew', true);
