@@ -6,25 +6,25 @@ import {
   hexToAscii,
   intToUintByte
 } from '@cypherock/communication';
-import { Xpub } from '@cypherock/database';
+import { Coin2 } from '@cypherock/database';
 
 export const formatCoinsForDB = async (
   walletId: string,
   xpubRaw: string,
   coinTypes: any
-): Promise<Xpub[]> => {
-  const xpubs: Xpub[] = [];
+): Promise<Coin2[]> => {
+  const coins: Coin2[] = [];
   let sliceIndex = 0;
   for (let i = 0; i < coinTypes.length; i++) {
     const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
     let z;
     sliceIndex += 224;
 
-    const coin = COINS[coinTypes[i]];
-    if (!coin) {
+    const coinData = COINS[coinTypes[i]];
+    if (!coinData) {
       throw new Error(`Cannot find coinType: ${coinTypes[i]}`);
     }
-    if (coin instanceof BtcCoinData && coin.hasSegwit) {
+    if (coinData instanceof BtcCoinData && coinData.hasSegwit) {
       z = xpubRaw.slice(sliceIndex, sliceIndex + 222);
       sliceIndex += 224;
     }
@@ -36,17 +36,21 @@ export const formatCoinsForDB = async (
       accountZpub = hexToAscii(z);
     }
 
-    const xpub: Xpub = {
-      totalBalance: { balance: '0', unconfirmedBalance: '0' },
-      xpubBalance: { balance: '0', unconfirmedBalance: '0' },
-      coin: coinTypes[i],
+    const coin: Coin2 = {
+      totalBalance: '0',
+      totalUnconfirmedBalance: '0',
+      xpubBalance: '0',
+      xpubUnconfirmedBalance: '0',
+      slug: coinTypes[i],
       walletId,
       xpub: accountXpub,
-      zpub: accountZpub
+      zpub: accountZpub,
+      networkId: -1, // TODO: need to fetch networkId here
+      price: ''
     };
-    xpubs.push(xpub);
+    coins.push(coin);
   }
-  return xpubs;
+  return coins;
 };
 
 export const createCoinIndexes = (selectedCoins: string[]) => {
