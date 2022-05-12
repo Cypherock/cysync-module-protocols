@@ -20,6 +20,9 @@
     "@cypherock/server-wrapper": "1.0.1-beta.11",
     "@cypherock/wallet": "3.0.1-beta.22",
     "@types/bignumber.js": "^5.0.0",
+    "@types/pouchdb": "^6.4.0",
+    "@types/pouchdb-adapter-websql": "^6.1.4",
+    "@types/pouchdb-find": "^6.3.7",
     "bignumber.js": "^9.0.2",
     "winston": "^3.5.1"
   },
