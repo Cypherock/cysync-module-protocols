@@ -92,7 +92,7 @@ export class GetDeviceInfo extends CyFlow {
         const deviceSerial = (serial + '').toLowerCase();
         this.emit('serial', deviceSerial);
 
-        const dbDevice = await deviceDB.getOne({serial: deviceSerial});
+        const dbDevice = await deviceDB.getBySerial(deviceSerial);
 
         if (!dbDevice) {
           this.emit('isNew', true);
