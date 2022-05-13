@@ -23,6 +23,7 @@
     "@types/pouchdb": "^6.4.0",
     "@types/pouchdb-adapter-websql": "^6.1.4",
     "@types/pouchdb-find": "^6.3.7",
+    "@types/transform-pouch": "^1.0.1",
     "bignumber.js": "^9.0.2",
     "winston": "^3.5.1"
   },

@@ -881,6 +881,13 @@
   dependencies:
     "@types/node" "*"
 
+"@types/transform-pouch@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@types/transform-pouch/-/transform-pouch-1.0.1.tgz#013466de23e1194b89660c135a26645f3d357332"
+  integrity sha512-BPtJDCurV6ZkUJPh+1QTIsuYkqn1fV0Lik8T6ce10S7KsLDy4WGyKb9YrkmoSbtfyPDrdWEkZOaur7k7vmKC+A==
+  dependencies:
+    "@types/pouchdb-core" "*"
+
 "@types/websql@^0.0.27":
   version "0.0.27"
   resolved "https://registry.yarnpkg.com/@types/websql/-/websql-0.0.27.tgz#621a666a7f02018e7cbb4abab956a25736c27d71"
