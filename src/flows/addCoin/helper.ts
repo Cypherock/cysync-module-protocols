@@ -45,7 +45,6 @@ export const formatCoinsForDB = async (
       walletId,
       xpub: accountXpub,
       zpub: accountZpub,
-      networkId: -1, // TODO: need to fetch networkId here
       price: ''
     };
     coins.push(coin);
