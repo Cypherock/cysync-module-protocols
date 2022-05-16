@@ -86,8 +86,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          // 1000000000 for fees in Gwei from wei
-          feeRate = Math.round(res.data.result / 1000000000);
+          feeRate = res.data.FastGasPrice;
         }
 
         metaData = await wallet.generateMetaData(
@@ -410,8 +409,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          // 1000000000 for fees in Gwei from wei
-          feeRate = Math.round(res.data.result / 1000000000);
+          feeRate = res.data.FastGasPrice;
         }
 
         const calcData = await wallet.approximateTxnFee(
