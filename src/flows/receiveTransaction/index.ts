@@ -49,7 +49,7 @@ export class TransactionReceiver extends CyFlow {
           xpub,
           walletId,
           zpub,
-          sendAddressDB: sendAddressDB
+          sendAddressDB
         });
         receiveAddress = wallet.newReceiveAddress().toUpperCase();
         //To make the first x in lowercase
@@ -61,7 +61,7 @@ export class TransactionReceiver extends CyFlow {
           xpub,
           walletId,
           zpub,
-          sendAddressDB: sendAddressDB
+          sendAddressDB
         });
         receiveAddress = await wallet.newReceiveAddress();
         receiveAddressPath = await wallet.getDerivationPath(receiveAddress);
