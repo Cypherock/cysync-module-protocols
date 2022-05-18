@@ -1,12 +1,12 @@
 import { COINS } from '@cypherock/communication';
-import { SendAddressDb } from '@cypherock/database';
+import { SendAddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
-  sendAddressDB: SendAddressDb;
+  sendAddressDB: SendAddressDB;
   walletId: string;
   coinType: string;
   xpub: string;

@@ -1,5 +1,5 @@
 import { ALLCOINS, COINS, EthCoinData } from '@cypherock/communication';
-import { SendAddressDb } from '@cypherock/database';
+import { SendAddressDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
 import { BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
@@ -8,7 +8,7 @@ import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
-  sendAddressDB: SendAddressDb;
+  sendAddressDB: SendAddressDB;
   walletId: string;
   pinExists: boolean;
   passphraseExists: boolean;

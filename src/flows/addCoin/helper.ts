@@ -6,14 +6,14 @@ import {
   hexToAscii,
   intToUintByte
 } from '@cypherock/communication';
-import { Coin2 } from '@cypherock/database';
+import { Coin } from '@cypherock/database';
 
 export const formatCoinsForDB = async (
   walletId: string,
   xpubRaw: string,
   coinTypes: any
-): Promise<Coin2[]> => {
-  const coins: Coin2[] = [];
+): Promise<Coin[]> => {
+  const coins: Coin[] = [];
   let sliceIndex = 0;
   for (let i = 0; i < coinTypes.length; i++) {
     const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
@@ -36,7 +36,7 @@ export const formatCoinsForDB = async (
       accountZpub = hexToAscii(z);
     }
 
-    const coin: Coin2 = {
+    const coin: Coin = {
       totalBalance: '0',
       totalUnconfirmedBalance: '0',
       xpubBalance: '0',
@@ -45,7 +45,7 @@ export const formatCoinsForDB = async (
       walletId,
       xpub: accountXpub,
       zpub: accountZpub,
-      price: ''
+      price: 0,
     };
     coins.push(coin);
   }

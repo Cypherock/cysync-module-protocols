@@ -1,5 +1,5 @@
 import { PacketVersionMap } from '@cypherock/communication';
-import { DeviceDb2 } from '@cypherock/database';
+import { DeviceDB } from '@cypherock/database';
 
 import {
   ALL_SUPPORTED_SDK_VERSIONS,
@@ -22,7 +22,7 @@ const formatSDKVersion = (version: string) => {
 };
 
 export interface GetDeviceInfoRunOptions extends CyFlowRunOptions {
-  deviceDB: DeviceDb2;
+  deviceDB: DeviceDB;
 }
 
 export class GetDeviceInfo extends CyFlow {
