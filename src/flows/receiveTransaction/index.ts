@@ -1,12 +1,12 @@
 import { COINS } from '@cypherock/communication';
-import { SendAddressDB } from '@cypherock/database';
+import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
-  sendAddressDB: SendAddressDB;
+  addressDB: AddressDB;
   walletId: string;
   coinType: string;
   xpub: string;
@@ -22,7 +22,7 @@ export class TransactionReceiver extends CyFlow {
 
   async run({
     connection,
-    sendAddressDB,
+    addressDB,
     walletId,
     coinType,
     xpub,
@@ -49,7 +49,7 @@ export class TransactionReceiver extends CyFlow {
           xpub,
           walletId,
           zpub,
-          sendAddressDB
+          addressDB
         });
         receiveAddress = wallet.newReceiveAddress().toUpperCase();
         //To make the first x in lowercase
@@ -61,7 +61,7 @@ export class TransactionReceiver extends CyFlow {
           xpub,
           walletId,
           zpub,
-          sendAddressDB
+          addressDB
         });
         receiveAddress = await wallet.newReceiveAddress();
         receiveAddressPath = await wallet.getDerivationPath(receiveAddress);

@@ -1,5 +1,5 @@
 import { ALLCOINS, COINS, EthCoinData } from '@cypherock/communication';
-import { SendAddressDB } from '@cypherock/database';
+import { AddressDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
 import { BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
@@ -8,7 +8,7 @@ import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
-  sendAddressDB: SendAddressDB;
+  addressDB: AddressDB;
   walletId: string;
   pinExists: boolean;
   passphraseExists: boolean;
@@ -32,7 +32,7 @@ export class TransactionSender extends CyFlow {
 
   async run({
     connection,
-    sendAddressDB,
+    addressDB,
     walletId,
     pinExists,
     passphraseExists,
@@ -121,13 +121,7 @@ export class TransactionSender extends CyFlow {
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
       } else {
-        wallet = new BitcoinWallet(
-          xpub,
-          coinType,
-          walletId,
-          zpub,
-          sendAddressDB
-        );
+        wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 
         if (fee) {
           feeRate = fee;
