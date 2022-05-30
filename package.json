@@ -19,11 +19,11 @@
     "@cypherock/database": "3.0.1-beta.20",
     "@cypherock/server-wrapper": "1.0.1-beta.12",
     "@cypherock/wallet": "3.0.1-beta.24",
-    "@types/bignumber.js": "^5.0.0",
     "bignumber.js": "^9.0.2",
     "winston": "^3.5.1"
   },
   "devDependencies": {
+    "@types/bignumber.js": "^5.0.0",
     "@types/mocha": "^9.1.0",
     "@types/nedb": "^1.8.12",
     "@types/node": "^17.0.15",
