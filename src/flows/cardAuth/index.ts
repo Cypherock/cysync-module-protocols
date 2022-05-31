@@ -43,7 +43,7 @@ export class CardAuthenticator extends CyFlow {
           this.emit('acceptedRequest', true);
         }
 
-        const receivedHash = await connection.receiveData([13, 70], 30000);
+        const receivedHash = await connection.receiveData([13, 70], 90000);
 
         if (
           receivedHash.commandType === 70 &&
@@ -78,7 +78,7 @@ export class CardAuthenticator extends CyFlow {
 
         await connection.sendData(16, challenge);
 
-        const challengeHash = await connection.receiveData([17, 70], 15000);
+        const challengeHash = await connection.receiveData([17, 70], 90000);
 
         if (challengeHash.commandType === 70) {
           this.emit('cardError');
@@ -110,7 +110,7 @@ export class CardAuthenticator extends CyFlow {
         }
 
         if (isTestApp) {
-          const pairing = await connection.receiveData([70], 15000);
+          const pairing = await connection.receiveData([70], 90000);
           if (!pairing.data.startsWith('01')) {
             this.emit('pairingFailed');
             throw new ExitFlowError();

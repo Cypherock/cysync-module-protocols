@@ -286,7 +286,7 @@ export class TransactionSender extends CyFlow {
           }
         }
 
-        const data1 = await connection.receiveData([48, 79, 81, 71], 45000);
+        const data1 = await connection.receiveData([48, 79, 81, 71], 90000);
         if (data1.commandType === 79) {
           this.emit('coinsConfirmed', false);
           throw new ExitFlowError();
