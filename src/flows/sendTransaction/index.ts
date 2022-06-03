@@ -120,7 +120,7 @@ export class TransactionSender extends CyFlow {
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
       } else {
-        wallet = new BitcoinWallet(xpub, coinType, zpub, addressDB);
+        wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 
         if (fee) {
           feeRate = fee;
@@ -285,7 +285,7 @@ export class TransactionSender extends CyFlow {
           }
         }
 
-        const data1 = await connection.receiveData([48, 79, 81, 71], 45000);
+        const data1 = await connection.receiveData([48, 79, 81, 71], 90000);
         if (data1.commandType === 79) {
           this.emit('coinsConfirmed', false);
           throw new ExitFlowError();
@@ -375,6 +375,7 @@ export class TransactionSender extends CyFlow {
   public async calcApproxFee(
     xpub: string,
     zpub: string | undefined,
+    walletId: string,
     coinType: string,
     outputList: Array<{ address: string; value?: BigNumber }>,
     fee: number,
@@ -437,7 +438,7 @@ export class TransactionSender extends CyFlow {
           );
         }
       } else {
-        const wallet = new BitcoinWallet(xpub, coinType, zpub);
+        const wallet = new BitcoinWallet(xpub, coinType, walletId, zpub);
 
         if (fee) {
           feeRate = fee;

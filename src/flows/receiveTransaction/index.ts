@@ -44,13 +44,25 @@ export class TransactionReceiver extends CyFlow {
       }
 
       if (coin.isEth) {
-        wallet = newWallet({ coinType, xpub, zpub, addressDB });
+        wallet = newWallet({
+          coinType,
+          xpub,
+          walletId,
+          zpub,
+          addressDB
+        });
         receiveAddress = wallet.newReceiveAddress().toUpperCase();
         //To make the first x in lowercase
         receiveAddress = '0x' + receiveAddress.slice(2);
         receiveAddressPath = await wallet.getDerivationPath(contractAbbr);
       } else {
-        wallet = newWallet({ coinType, xpub, zpub, addressDB });
+        wallet = newWallet({
+          coinType,
+          xpub,
+          walletId,
+          zpub,
+          addressDB
+        });
         receiveAddress = await wallet.newReceiveAddress();
         receiveAddressPath = await wallet.getDerivationPath(receiveAddress);
       }
