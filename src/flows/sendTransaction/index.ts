@@ -1,7 +1,7 @@
-import { ALLCOINS, COINS, EthCoinData } from '@cypherock/communication';
+import { ALLCOINS, COINS, EthCoinData, NearCoinData } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
-import { BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
+import {NearWallet, BitcoinWallet, EthereumWallet} from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
 
 import { logger } from '../../utils';
@@ -54,7 +54,7 @@ export class TransactionSender extends CyFlow {
       let unsignedTransaction = '';
       let metaData = '';
       let feeRate;
-      let wallet: BitcoinWallet | EthereumWallet;
+      let wallet: BitcoinWallet | EthereumWallet | NearWallet;
       let totalFees: number;
       let txnInfo: any;
       let inputs: any[];
@@ -119,6 +119,23 @@ export class TransactionSender extends CyFlow {
           .toString();
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
+      }else if(coin instanceof NearCoinData){
+        wallet = new NearWallet(xpub, coin);
+        fee = 0; //Todo: Fetch fee from the node
+        metaData = await wallet.generateMetaData(fee);
+
+        const txnData = await wallet.generateUnsignedTransaction(
+          outputList[0].address,
+          outputList[0].value,
+        );
+        ({
+          txn: unsignedTransaction,
+          inputs,
+          outputs
+        } = txnData);
+
+        totalFees = fee;
+
       } else {
         wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 
