@@ -1,6 +1,6 @@
 {
   "name": "@cypherock/protocols",
-  "version": "3.0.1-beta.32",
+  "version": "3.0.1-beta.33",
   "description": "Communication protocols for the cypherock x1 wallet",
   "main": "dist/app.js",
   "types": "dist/app.d.ts",
