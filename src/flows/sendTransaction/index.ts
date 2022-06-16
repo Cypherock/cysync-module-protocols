@@ -122,14 +122,14 @@ export class TransactionSender extends CyFlow {
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
       } else {
-        wallet = new BitcoinWallet(
+        wallet = new BitcoinWallet({
           xpub,
           coinType,
           walletId,
           zpub,
-          addressDB,
-          transactionDB
-        );
+          addressDb: addressDB,
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;
@@ -448,14 +448,13 @@ export class TransactionSender extends CyFlow {
           );
         }
       } else {
-        const wallet = new BitcoinWallet(
+        const wallet = new BitcoinWallet({
           xpub,
           coinType,
           walletId,
           zpub,
-          undefined,
-          transactionDB
-        );
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;
