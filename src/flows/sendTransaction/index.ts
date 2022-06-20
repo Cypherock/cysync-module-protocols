@@ -4,7 +4,7 @@ import {
   EthCoinData,
   NearCoinData
 } from '@cypherock/communication';
-import { AddressDB, TransactionDB } from '@cypherock/database';
+import { AddressDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
 import { NearWallet, BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
@@ -13,7 +13,6 @@ import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
-  transactionDB: TransactionDB;
   addressDB: AddressDB;
   walletId: string;
   pinExists: boolean;
@@ -39,7 +38,6 @@ export class TransactionSender extends CyFlow {
   async run({
     connection,
     addressDB,
-    transactionDB,
     walletId,
     pinExists,
     passphraseExists,
@@ -93,7 +91,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = Math.round(res.data / 1000000000);
+          feeRate = res.data.FastGasPrice;
         }
 
         metaData = await wallet.generateMetaData(
@@ -138,14 +136,7 @@ export class TransactionSender extends CyFlow {
 
         totalFees = fee;
       } else {
-        wallet = new BitcoinWallet({
-          xpub,
-          coinType,
-          walletId,
-          zpub,
-          addressDb: addressDB,
-          transactionDb: transactionDB
-        });
+        wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 
         if (fee) {
           feeRate = fee;
@@ -435,8 +426,7 @@ export class TransactionSender extends CyFlow {
       gasLimit: 21000,
       contractAddress: undefined,
       contractAbbr: undefined
-    },
-    transactionDB?: TransactionDB
+    }
   ) {
     try {
       this.cancelled = false;
@@ -462,7 +452,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = Math.round(res.data / 1000000000);
+          feeRate = res.data.FastGasPrice;
         }
 
         const calcData = await wallet.approximateTxnFee(
@@ -527,13 +517,7 @@ export class TransactionSender extends CyFlow {
           );
         }
       } else {
-        const wallet = new BitcoinWallet({
-          xpub,
-          coinType,
-          walletId,
-          zpub,
-          transactionDb: transactionDB
-        });
+        const wallet = new BitcoinWallet(xpub, coinType, walletId, zpub);
 
         if (fee) {
           feeRate = fee;
