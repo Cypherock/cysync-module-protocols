@@ -704,7 +704,6 @@ export class TransactionSender extends CyFlow {
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
       } else if (coin instanceof NearCoinData) {
         wallet = new NearWallet(xpub, coin);
-        fee = 0; //Todo: Fetch fee from the node
         metaData = await wallet.generateMetaData(fee);
 
         const txnData = await wallet.generateUnsignedTransaction(
@@ -860,6 +859,43 @@ export class TransactionSender extends CyFlow {
           gasLimit,
           isSendAll,
           data.contractAddress
+        );
+        totalFees = calcData.fees
+          .dividedBy(new BigNumber(coin.multiplier))
+          .toString(10);
+        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
+
+        if (!token) {
+          throw new Error('Invalid token or coinType');
+        }
+
+        if (isSendAll) {
+          this.emit(
+            'sendMaxAmount',
+            calcData.amount
+              .dividedBy(new BigNumber(token.multiplier))
+              .toString(10)
+          );
+        }
+      } else if (coin instanceof NearCoinData) {
+        const { network } = coin;
+
+        const wallet = new NearWallet(xpub, coin);
+
+        if (fee) {
+          feeRate = fee;
+        } else {
+          logger.info(`Fetching optimal fees from the internet for near.`);
+          const res = await Server.near.transaction
+            .getFees({ network })
+            .request();
+          feeRate = Math.round(res);
+        }
+
+        const calcData = await wallet.approximateTxnFee(
+          outputList[0].value,
+          feeRate,
+          isSendAll
         );
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
