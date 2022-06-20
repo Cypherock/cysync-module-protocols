@@ -119,9 +119,8 @@ export class TransactionSender extends CyFlow {
           .toString();
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
-      }else if(coin instanceof NearCoinData){
+      } else if (coin instanceof NearCoinData){
         wallet = new NearWallet(xpub, coin);
-        fee = 0; //Todo: Fetch fee from the node
         metaData = await wallet.generateMetaData(fee);
 
         const txnData = await wallet.generateUnsignedTransaction(
@@ -244,7 +243,7 @@ export class TransactionSender extends CyFlow {
 
         await connection.sendData(52, unsignedTransaction);
 
-        if (!(coin instanceof EthCoinData)) {
+        if (!(coin instanceof EthCoinData || coin instanceof NearCoinData)) {
           const utxoRequest = await connection.receiveData([51], 10000);
           if (utxoRequest.data !== '02') {
             throw new Error('Invalid data from device');
@@ -344,6 +343,32 @@ export class TransactionSender extends CyFlow {
 
           logger.info('Signed txn', { signedTxnEth });
           this.emit('signedTxn', signedTxnEth);
+        } else if(wallet instanceof NearWallet) {
+          if (!(coin instanceof NearCoinData)) {
+            throw new Error('Near Wallet found, but coin is not Near.');
+          }
+
+          const signedTxn = await connection.receiveData([54], 90000);
+          await connection.sendData(42, '01');
+
+          const signedTxnNear = wallet.getSignedTransaction(
+            unsignedTransaction,
+            signedTxn.data,
+          );
+
+          try {
+            const isVerified = await wallet.verifySignedTxn(signedTxnNear);
+            this.emit('signatureVerify', { isVerified, index: 0 });
+          } catch (error) {
+            this.emit('signatureVerify', {
+              isVerified: false,
+              index: -1,
+              error
+            });
+          }
+
+          logger.info('Signed txn', { signedTxnNear });
+          this.emit('signedTxn', signedTxnNear);
         } else {
           const inputSignatures: string[] = [];
           for (const _ of txnInfo.inputs) {
@@ -454,6 +479,44 @@ export class TransactionSender extends CyFlow {
               .toString(10)
           );
         }
+      } else if(coin instanceof NearCoinData){
+        const { network } = coin;
+
+        const wallet = new NearWallet(xpub, coin);
+
+        if (fee) {
+          feeRate = fee;
+        } else {
+          logger.info(`Fetching optimal fees from the internet for near.`);
+          const res = await Server.near.transaction
+            .getFees({ network })
+            .request();
+          feeRate = Math.round(res);
+        }
+
+        const calcData = await wallet.approximateTxnFee(
+          outputList[0].value,
+          feeRate,
+          isSendAll,
+        );
+        totalFees = calcData.fees
+          .dividedBy(new BigNumber(coin.multiplier))
+          .toString(10);
+        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
+
+        if (!token) {
+          throw new Error('Invalid token or coinType');
+        }
+
+        if (isSendAll) {
+          this.emit(
+            'sendMaxAmount',
+            calcData.amount
+              .dividedBy(new BigNumber(token.multiplier))
+              .toString(10)
+          );
+        }
+
       } else {
         const wallet = new BitcoinWallet(xpub, coinType, walletId, zpub);
 
