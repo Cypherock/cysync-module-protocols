@@ -1,13 +1,19 @@
-import { ALLCOINS, COINS, EthCoinData, NearCoinData } from '@cypherock/communication';
-import { AddressDB } from '@cypherock/database';
+import {
+  ALLCOINS,
+  COINS,
+  EthCoinData,
+  NearCoinData
+} from '@cypherock/communication';
+import { AddressDB, TransactionDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
-import {NearWallet, BitcoinWallet, EthereumWallet} from '@cypherock/wallet';
+import { NearWallet, BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
 
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
+  transactionDB: TransactionDB;
   addressDB: AddressDB;
   walletId: string;
   pinExists: boolean;
@@ -33,6 +39,7 @@ export class TransactionSender extends CyFlow {
   async run({
     connection,
     addressDB,
+    transactionDB,
     walletId,
     pinExists,
     passphraseExists,
@@ -86,7 +93,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = res.data.FastGasPrice;
+          feeRate = Math.round(res.data / 1000000000);
         }
 
         metaData = await wallet.generateMetaData(
@@ -119,24 +126,26 @@ export class TransactionSender extends CyFlow {
           .toString();
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
-      } else if (coin instanceof NearCoinData){
+      } else if (coin instanceof NearCoinData) {
         wallet = new NearWallet(xpub, coin);
         metaData = await wallet.generateMetaData(fee);
 
         const txnData = await wallet.generateUnsignedTransaction(
           outputList[0].address,
-          outputList[0].value,
+          outputList[0].value
         );
-        ({
-          txn: unsignedTransaction,
-          inputs,
-          outputs
-        } = txnData);
+        ({ txn: unsignedTransaction, inputs, outputs } = txnData);
 
         totalFees = fee;
-
       } else {
-        wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
+        wallet = new BitcoinWallet({
+          xpub,
+          coinType,
+          walletId,
+          zpub,
+          addressDb: addressDB,
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;
@@ -343,7 +352,7 @@ export class TransactionSender extends CyFlow {
 
           logger.info('Signed txn', { signedTxnEth });
           this.emit('signedTxn', signedTxnEth);
-        } else if(wallet instanceof NearWallet) {
+        } else if (wallet instanceof NearWallet) {
           if (!(coin instanceof NearCoinData)) {
             throw new Error('Near Wallet found, but coin is not Near.');
           }
@@ -353,7 +362,7 @@ export class TransactionSender extends CyFlow {
 
           const signedTxnNear = wallet.getSignedTransaction(
             unsignedTransaction,
-            signedTxn.data,
+            signedTxn.data
           );
 
           try {
@@ -426,7 +435,8 @@ export class TransactionSender extends CyFlow {
       gasLimit: 21000,
       contractAddress: undefined,
       contractAbbr: undefined
-    }
+    },
+    transactionDB?: TransactionDB
   ) {
     try {
       this.cancelled = false;
@@ -452,7 +462,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = res.data.FastGasPrice;
+          feeRate = Math.round(res.data / 1000000000);
         }
 
         const calcData = await wallet.approximateTxnFee(
@@ -479,7 +489,7 @@ export class TransactionSender extends CyFlow {
               .toString(10)
           );
         }
-      } else if(coin instanceof NearCoinData){
+      } else if (coin instanceof NearCoinData) {
         const { network } = coin;
 
         const wallet = new NearWallet(xpub, coin);
@@ -497,7 +507,7 @@ export class TransactionSender extends CyFlow {
         const calcData = await wallet.approximateTxnFee(
           outputList[0].value,
           feeRate,
-          isSendAll,
+          isSendAll
         );
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
@@ -516,9 +526,14 @@ export class TransactionSender extends CyFlow {
               .toString(10)
           );
         }
-
       } else {
-        const wallet = new BitcoinWallet(xpub, coinType, walletId, zpub);
+        const wallet = new BitcoinWallet({
+          xpub,
+          coinType,
+          walletId,
+          zpub,
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;
