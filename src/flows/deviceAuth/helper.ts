@@ -51,9 +51,7 @@ export const verifyChallengeSignature = async (
     isTestApp
   };
   logger.info('Verifying challenge signature: Params', challengeParams);
-  const res = await deviceServer
-    .challenge(challengeParams)
-    .request();
+  const res = await deviceServer.challenge(challengeParams).request();
   logger.info('Verify challenge signature response', res);
   // Server replies false if not verified, and 'no device found' if there is no device with this serial number. and obviously true if verified.
   if (res.data.verified !== true) return false;
