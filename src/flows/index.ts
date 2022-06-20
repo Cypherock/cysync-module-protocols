@@ -1,12 +1,14 @@
 export * from './error';
 import {
   DeviceConnection,
-  PacketVersionMap
+  PacketVersionMap,
+  StatusData,
+  RawData
   // DeviceIdleState
 } from '@cypherock/communication';
 import { EventEmitter } from 'events';
 
-import { logger } from '../utils';
+import { logger, sleep } from '../utils';
 
 export interface CyFlowRunOptions {
   connection: DeviceConnection;
@@ -93,7 +95,7 @@ export abstract class CyFlow extends EventEmitter {
     connection: DeviceConnection,
     options?: { dontRemoveListeners?: boolean; dontAbort?: boolean }
   ) {
-    console.log("In on End");
+    console.log('In on End');
     try {
       try {
         if (!(options && options.dontAbort)) {
@@ -148,5 +150,27 @@ export abstract class CyFlow extends EventEmitter {
         resolve(false);
       }
     });
+  }
+
+  async getOutput(
+    connection: DeviceConnection,
+    sequenceNumber: number,
+    onStatus: (status: StatusData) => void,
+    options?: { interval?: number }
+  ): Promise<RawData> {
+    while (true) {
+      const response = await connection.getCommandOutput(sequenceNumber);
+      if (response.isRawData) {
+        return response as RawData;
+      }
+
+      const status = response as StatusData;
+
+      if (status.currentCmdSeq === sequenceNumber) {
+        onStatus(response as StatusData);
+      }
+
+      await sleep(options?.interval || 200);
+    }
   }
 }
