@@ -1,5 +1,9 @@
 export * from './error';
-import { DeviceConnection } from '@cypherock/communication';
+import {
+  DeviceConnection,
+  PacketVersionMap
+  // DeviceIdleState
+} from '@cypherock/communication';
 import { EventEmitter } from 'events';
 
 import { logger } from '../utils';
@@ -40,17 +44,25 @@ export abstract class CyFlow extends EventEmitter {
           throw new Error('Connection was not open');
         }
 
-        await connection.sendData(41, '00', 2);
-        connection
-          .receiveData([42], 2000)
-          .then(deviceResponse => {
-            resolve(String(deviceResponse.data).slice(0, 2) === '02');
-          })
-          .catch(error => {
-            if (error) {
-              resolve(false);
-            }
-          });
+        const version = connection.getPacketVersion();
+
+        if (version === PacketVersionMap.v3) {
+          await connection.getStatus();
+          // resolve(status.deviceIdleState === DeviceIdleState.IDLE);
+          resolve(true);
+        } else {
+          await connection.sendData(41, '00', 2);
+          connection
+            .receiveData([42], 2000)
+            .then(deviceResponse => {
+              resolve(String(deviceResponse.data).slice(0, 2) === '02');
+            })
+            .catch(error => {
+              if (error) {
+                resolve(false);
+              }
+            });
+        }
       } catch (error) {
         reject(error);
       }
@@ -81,6 +93,7 @@ export abstract class CyFlow extends EventEmitter {
     connection: DeviceConnection,
     options?: { dontRemoveListeners?: boolean; dontAbort?: boolean }
   ) {
+    console.log("In on End");
     try {
       try {
         if (!(options && options.dontAbort)) {
@@ -118,12 +131,18 @@ export abstract class CyFlow extends EventEmitter {
             logger.info('Desktop sent abort command');
 
             // Closing connection will cause the `run` function to result in an error.
-            connection.afterOperation();
-            resolve(true);
+            connection
+              .afterOperation()
+              .then(() => {})
+              .catch(() => {})
+              .finally(() => resolve(true));
           })
           .catch(e => {
-            connection.afterOperation();
-            reject(e);
+            connection
+              .afterOperation()
+              .then(() => {})
+              .catch(() => {})
+              .finally(() => reject(e));
           });
       } else {
         resolve(false);

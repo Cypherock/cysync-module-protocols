@@ -43,7 +43,7 @@ export async function upgrade(
 
           await connection.beforeOperation();
           await connection.sendStmData(data.toString('hex'));
-          connection.afterOperation();
+          await connection.afterOperation();
 
           isCompleted = true;
           connection.destroy();
