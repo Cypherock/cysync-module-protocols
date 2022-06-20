@@ -1,5 +1,5 @@
 import { ALLCOINS, COINS, EthCoinData } from '@cypherock/communication';
-import { AddressDB } from '@cypherock/database';
+import { AddressDB, TransactionDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
 import { BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
@@ -8,6 +8,7 @@ import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
+  transactionDB: TransactionDB;
   addressDB: AddressDB;
   walletId: string;
   pinExists: boolean;
@@ -33,6 +34,7 @@ export class TransactionSender extends CyFlow {
   async run({
     connection,
     addressDB,
+    transactionDB,
     walletId,
     pinExists,
     passphraseExists,
@@ -120,7 +122,14 @@ export class TransactionSender extends CyFlow {
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
       } else {
-        wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
+        wallet = new BitcoinWallet({
+          xpub,
+          coinType,
+          walletId,
+          zpub,
+          addressDb: addressDB,
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;
@@ -384,7 +393,8 @@ export class TransactionSender extends CyFlow {
       gasLimit: 21000,
       contractAddress: undefined,
       contractAbbr: undefined
-    }
+    },
+    transactionDB?: TransactionDB
   ) {
     try {
       this.cancelled = false;
@@ -438,7 +448,13 @@ export class TransactionSender extends CyFlow {
           );
         }
       } else {
-        const wallet = new BitcoinWallet(xpub, coinType, walletId, zpub);
+        const wallet = new BitcoinWallet({
+          xpub,
+          coinType,
+          walletId,
+          zpub,
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;
