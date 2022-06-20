@@ -1,6 +1,36 @@
 import { createPort } from '@cypherock/communication';
-import { DeviceAuthenticator } from './app';
+// import { DeviceAuthenticator } from './app';
+// import { CardAuthenticator } from './app';
+import { WalletAdder } from './app';
 // import { LogsFetcher } from './app';
+
+const addWalletTestRun = async () => {
+  process.env.userDataPath = '.';
+  const walletAdder = new WalletAdder();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
+
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
+
+  walletAdder.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
+
+  walletAdder.addListener('acceptedRequest', val => {
+    console.log({ acceptedRequest: val });
+  });
+
+  walletAdder.addListener('walletDetails', val => {
+    console.log({ details: val });
+  });
+
+  await walletAdder.run({
+    connection,
+    sdkVersion: '1.0.0'
+  });
+};
 
 // const fetchLogsTestRun = async () => {
 //   process.env.userDataPath = '.';
@@ -74,45 +104,45 @@ import { DeviceAuthenticator } from './app';
 //   });
 // };
 
-const deviceAuthTestRun = async () => {
-  const deviceAuthenticator = new DeviceAuthenticator();
-  const { connection } = await createPort();
-  await connection.beforeOperation();
-  const packetVersion = await connection.selectPacketVersion();
-  console.log({ packetVersion });
+// const deviceAuthTestRun = async () => {
+//   const deviceAuthenticator = new DeviceAuthenticator();
+//   const { connection } = await createPort();
+//   await connection.beforeOperation();
+//   const packetVersion = await connection.selectPacketVersion();
+//   console.log({ packetVersion });
 
-  deviceAuthenticator.addListener('error', error => {
-    console.log('In Error');
-    console.log(error);
-  });
+//   deviceAuthenticator.addListener('error', error => {
+//     console.log('In Error');
+//     console.log(error);
+//   });
 
-  deviceAuthenticator.addListener('acceptedRequest', val => {
-    console.log({ acceptedRequest: val });
-  });
+//   deviceAuthenticator.addListener('acceptedRequest', val => {
+//     console.log({ acceptedRequest: val });
+//   });
 
-  deviceAuthenticator.addListener('verified', val => {
-    console.log({ verified: val });
-  });
+//   deviceAuthenticator.addListener('verified', val => {
+//     console.log({ verified: val });
+//   });
 
-  deviceAuthenticator.addListener('cardError', () => {
-    console.log({ error: 'Card Error' });
-  });
+//   deviceAuthenticator.addListener('cardError', () => {
+//     console.log({ error: 'Card Error' });
+//   });
 
-  deviceAuthenticator.addListener('serial', val => {
-    console.log({ msg: 'Serial', val });
-  });
+//   deviceAuthenticator.addListener('serial', val => {
+//     console.log({ msg: 'Serial', val });
+//   });
 
-  deviceAuthenticator.addListener('error', val => {
-    console.log({ msg: 'Error occurred' });
-    console.log(val);
-  });
+//   deviceAuthenticator.addListener('error', val => {
+//     console.log({ msg: 'Error occurred' });
+//     console.log(val);
+//   });
 
-  await deviceAuthenticator.run({
-    connection,
-    firmwareVersion: '1.0.0',
-    sdkVersion: '1.0.0',
-    inTestApp: false,
-  });
-};
+//   await deviceAuthenticator.run({
+//     connection,
+//     firmwareVersion: '1.0.0',
+//     sdkVersion: '1.0.0',
+//     inTestApp: false
+//   });
+// };
 
-deviceAuthTestRun();
+addWalletTestRun();

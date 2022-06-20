@@ -53,13 +53,17 @@ export class DeviceAuthenticator extends CyFlow {
 
           let requestAcceptedState = 0;
 
-          let data = await this.getOutput(
-            connection,
+          let data = await connection.waitForCommandOutput({
             sequenceNumber,
-            status => {
+            commandType: 83,
+            onStatus: status => {
               if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
                 this.emit('confirmed', false);
                 throw new ExitFlowError();
+              }
+
+              if (status.cmdState !== CmdState.CMD_STATUS_EXECUTING) {
+                return;
               }
 
               if (
@@ -75,7 +79,7 @@ export class DeviceAuthenticator extends CyFlow {
                 this.emit('confirmed', true);
               }
             }
-          );
+          });
 
           if (data.commandType !== 85) {
             throw new Error('Invalid command type');

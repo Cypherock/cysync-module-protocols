@@ -68,22 +68,26 @@ export class LogsFetcher extends CyFlow {
         data: '00',
         sequenceNumber
       });
-      const resp = await this.getOutput(connection, sequenceNumber, status => {
-        if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-          this.emit('acceptedRequest', false);
-          throw new ExitFlowError();
-        }
+      const resp = await connection.waitForCommandOutput({
+        commandType: 38,
+        sequenceNumber,
+        onStatus: status => {
+          if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
+            this.emit('acceptedRequest', false);
+            throw new ExitFlowError();
+          }
 
-        if (
-          status.cmdStatus >= LOGS_FETCHER_STATUS.START_COMMAND &&
-          requestAcceptedState === 0
-        ) {
-          requestAcceptedState = 1;
-        }
+          if (
+            status.cmdStatus >= LOGS_FETCHER_STATUS.START_COMMAND &&
+            requestAcceptedState === 0
+          ) {
+            requestAcceptedState = 1;
+          }
 
-        if (requestAcceptedState === 1) {
-          requestAcceptedState = 2;
-          this.emit('acceptedRequest', true);
+          if (requestAcceptedState === 1) {
+            requestAcceptedState = 2;
+            this.emit('acceptedRequest', true);
+          }
         }
       });
 
