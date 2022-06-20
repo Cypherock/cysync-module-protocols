@@ -1,65 +1,65 @@
 import { createPort } from '@cypherock/communication';
 // import { DeviceAuthenticator } from './app';
 // import { CardAuthenticator } from './app';
-import { WalletAdder } from './app';
-// import { LogsFetcher } from './app';
+// import { WalletAdder } from './app';
+import { LogsFetcher } from './app';
 
-const addWalletTestRun = async () => {
-  process.env.userDataPath = '.';
-  const walletAdder = new WalletAdder();
-  const { connection } = await createPort();
-  await connection.beforeOperation();
-
-  const packetVersion = await connection.selectPacketVersion();
-  console.log({ packetVersion });
-
-  walletAdder.addListener('error', error => {
-    console.log('In Error');
-    console.log(error);
-  });
-
-  walletAdder.addListener('acceptedRequest', val => {
-    console.log({ acceptedRequest: val });
-  });
-
-  walletAdder.addListener('walletDetails', val => {
-    console.log({ details: val });
-  });
-
-  await walletAdder.run({
-    connection,
-    sdkVersion: '1.0.0'
-  });
-};
-
-// const fetchLogsTestRun = async () => {
+// const addWalletTestRun = async () => {
 //   process.env.userDataPath = '.';
-//   const logFetcher = new LogsFetcher();
+//   const walletAdder = new WalletAdder();
 //   const { connection } = await createPort();
 //   await connection.beforeOperation();
 
 //   const packetVersion = await connection.selectPacketVersion();
 //   console.log({ packetVersion });
 
-//   logFetcher.addListener('error', error => {
+//   walletAdder.addListener('error', error => {
 //     console.log('In Error');
 //     console.log(error);
 //   });
 
-//   logFetcher.addListener('acceptedRequest', val => {
+//   walletAdder.addListener('acceptedRequest', val => {
 //     console.log({ acceptedRequest: val });
 //   });
 
-//   logFetcher.addListener('completed', val => {
-//     console.log({ completed: val });
+//   walletAdder.addListener('walletDetails', val => {
+//     console.log({ details: val });
 //   });
 
-//   await logFetcher.run({
+//   await walletAdder.run({
 //     connection,
-//     firmwareVersion: '1.0.0',
-//     sdkVersion: '1.0.0',
+//     sdkVersion: '1.0.0'
 //   });
 // };
+
+const fetchLogsTestRun = async () => {
+  process.env.userDataPath = '.';
+  const logFetcher = new LogsFetcher();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
+
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
+
+  logFetcher.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
+
+  logFetcher.addListener('acceptedRequest', val => {
+    console.log({ acceptedRequest: val });
+  });
+
+  logFetcher.addListener('completed', val => {
+    console.log({ completed: val });
+  });
+
+  await logFetcher.run({
+    connection,
+    firmwareVersion: '1.0.0',
+    sdkVersion: '1.0.0',
+  });
+};
 
 // const cardAuthTestRun = async () => {
 //   const cardAuthenticator = new CardAuthenticator();
@@ -145,4 +145,4 @@ const addWalletTestRun = async () => {
 //   });
 // };
 
-addWalletTestRun();
+fetchLogsTestRun();

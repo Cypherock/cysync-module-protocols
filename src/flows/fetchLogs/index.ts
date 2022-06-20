@@ -61,7 +61,7 @@ export class LogsFetcher extends CyFlow {
     let requestAcceptedState = 0;
 
     //end of packet in hex with carrige return and line feed.
-    while (rawData !== '656e646f667061636b65740d0a') {
+    while (rawData.toLowerCase() !== '656e646f667061636b65740d0a') {
       const sequenceNumber = connection.getNewSequenceNumber();
       await connection.sendCommand({
         commandType: 38,
