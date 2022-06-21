@@ -23,7 +23,7 @@ export const verifySerialSignature = async (
   };
   logger.info('Verifying serial signature: Params', verifyParams);
   const res = await deviceServer.verify(verifyParams).request();
-  logger.info('Verify serial signature response', res);
+  logger.info('Verify serial signature response', res.data, res.status);
   if (res.data.verified === true) {
     return res.data.challenge;
   } else {
@@ -52,7 +52,7 @@ export const verifyChallengeSignature = async (
   };
   logger.info('Verifying challenge signature: Params', challengeParams);
   const res = await deviceServer.challenge(challengeParams).request();
-  logger.info('Verify challenge signature response', res);
+  logger.info('Verify challenge signature response', res.data, res.status);
   // Server replies false if not verified, and 'no device found' if there is no device with this serial number. and obviously true if verified.
   if (res.data.verified !== true) return false;
   return true;
