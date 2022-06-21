@@ -2,7 +2,8 @@ import { createPort } from '@cypherock/communication';
 // import { DeviceAuthenticator } from './app';
 // import { CardAuthenticator } from './app';
 // import { WalletAdder } from './app';
-import { LogsFetcher } from './app';
+// import { LogsFetcher } from './app';
+import { GetDeviceInfo } from './app';
 
 // const addWalletTestRun = async () => {
 //   process.env.userDataPath = '.';
@@ -32,34 +33,79 @@ import { LogsFetcher } from './app';
 //   });
 // };
 
-const fetchLogsTestRun = async () => {
+const getDeviceInfoTestRun = async () => {
   process.env.userDataPath = '.';
-  const logFetcher = new LogsFetcher();
+  const getDeviceInfo = new GetDeviceInfo();
   const { connection } = await createPort();
   await connection.beforeOperation();
 
   const packetVersion = await connection.selectPacketVersion();
   console.log({ packetVersion });
 
-  logFetcher.addListener('error', error => {
+  getDeviceInfo.addListener('error', error => {
     console.log('In Error');
     console.log(error);
   });
 
-  logFetcher.addListener('acceptedRequest', val => {
-    console.log({ acceptedRequest: val });
+  getDeviceInfo.addListener('sdkVersion', val => {
+    console.log({ sdkVersion: val });
   });
 
-  logFetcher.addListener('completed', val => {
-    console.log({ completed: val });
+  getDeviceInfo.addListener('firmwareVersion', val => {
+    console.log({ firmwareVersion: val });
   });
 
-  await logFetcher.run({
+  getDeviceInfo.addListener('serial', val => {
+    console.log({ serial: val });
+  });
+
+  getDeviceInfo.addListener('auth', val => {
+    console.log({ auth: val });
+  });
+
+  getDeviceInfo.addListener('isNew', val => {
+    console.log({ isNew: val });
+  });
+
+  getDeviceInfo.addListener('lastAuth', val => {
+    console.log({ lastAuth: val });
+  });
+
+  await getDeviceInfo.run({
     connection,
-    firmwareVersion: '1.0.0',
     sdkVersion: '1.0.0',
+    deviceDB: { getBySerial: () => Promise.resolve(null) } as any
   });
 };
+
+// const fetchLogsTestRun = async () => {
+//   process.env.userDataPath = '.';
+//   const logFetcher = new LogsFetcher();
+//   const { connection } = await createPort();
+//   await connection.beforeOperation();
+
+//   const packetVersion = await connection.selectPacketVersion();
+//   console.log({ packetVersion });
+
+//   logFetcher.addListener('error', error => {
+//     console.log('In Error');
+//     console.log(error);
+//   });
+
+//   logFetcher.addListener('acceptedRequest', val => {
+//     console.log({ acceptedRequest: val });
+//   });
+
+//   logFetcher.addListener('completed', val => {
+//     console.log({ completed: val });
+//   });
+
+//   await logFetcher.run({
+//     connection,
+//     firmwareVersion: '1.0.0',
+//     sdkVersion: '1.0.0',
+//   });
+// };
 
 // const cardAuthTestRun = async () => {
 //   const cardAuthenticator = new CardAuthenticator();
@@ -145,4 +191,4 @@ const fetchLogsTestRun = async () => {
 //   });
 // };
 
-fetchLogsTestRun();
+getDeviceInfoTestRun();
