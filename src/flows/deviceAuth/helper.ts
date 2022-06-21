@@ -15,14 +15,15 @@ export const verifySerialSignature = async (
   postfix1?: string,
   postfix2?: string
 ): Promise<string> => {
-  const res = await deviceServer
-    .verify({
-      serial,
-      signature,
-      postfix1,
-      postfix2
-    })
-    .request();
+  const verifyParams = {
+    serial,
+    signature,
+    postfix1,
+    postfix2
+  };
+  logger.info('Verifying serial signature: Params', verifyParams);
+  const res = await deviceServer.verify(verifyParams).request();
+  logger.info('Verify serial signature response', res.data, res.status);
   if (res.data.verified === true) {
     return res.data.challenge;
   } else {
@@ -40,18 +41,18 @@ export const verifyChallengeSignature = async (
   postfix1?: string,
   postfix2?: string
 ) => {
-  const res = await deviceServer
-    .challenge({
-      serial,
-      signature,
-      challenge,
-      firmwareVersion,
-      postfix1,
-      postfix2,
-      isTestApp
-    })
-    .request();
-
+  const challengeParams = {
+    serial,
+    signature,
+    challenge,
+    firmwareVersion,
+    postfix1,
+    postfix2,
+    isTestApp
+  };
+  logger.info('Verifying challenge signature: Params', challengeParams);
+  const res = await deviceServer.challenge(challengeParams).request();
+  logger.info('Verify challenge signature response', res.data, res.status);
   // Server replies false if not verified, and 'no device found' if there is no device with this serial number. and obviously true if verified.
   if (res.data.verified !== true) return false;
   return true;
