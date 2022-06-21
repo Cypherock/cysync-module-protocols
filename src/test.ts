@@ -1,37 +1,38 @@
 import { createPort } from '@cypherock/communication';
-// import { DeviceAuthenticator } from './app';
-// import { CardAuthenticator } from './app';
-// import { WalletAdder } from './app';
-// import { LogsFetcher } from './app';
+import { DeviceAuthenticator } from './app';
+import { CardAuthenticator } from './app';
+import { WalletAdder } from './app';
+import { LogsFetcher } from './app';
 import { GetDeviceInfo } from './app';
+import { CoinAdder } from './app';
 
-// const addWalletTestRun = async () => {
-//   process.env.userDataPath = '.';
-//   const walletAdder = new WalletAdder();
-//   const { connection } = await createPort();
-//   await connection.beforeOperation();
+const addWalletTestRun = async () => {
+  process.env.userDataPath = '.';
+  const walletAdder = new WalletAdder();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
 
-//   const packetVersion = await connection.selectPacketVersion();
-//   console.log({ packetVersion });
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
 
-//   walletAdder.addListener('error', error => {
-//     console.log('In Error');
-//     console.log(error);
-//   });
+  walletAdder.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
 
-//   walletAdder.addListener('acceptedRequest', val => {
-//     console.log({ acceptedRequest: val });
-//   });
+  walletAdder.addListener('acceptedRequest', val => {
+    console.log({ acceptedRequest: val });
+  });
 
-//   walletAdder.addListener('walletDetails', val => {
-//     console.log({ details: val });
-//   });
+  walletAdder.addListener('walletDetails', val => {
+    console.log({ details: val });
+  });
 
-//   await walletAdder.run({
-//     connection,
-//     sdkVersion: '1.0.0'
-//   });
-// };
+  await walletAdder.run({
+    connection,
+    sdkVersion: '1.0.0'
+  });
+};
 
 const getDeviceInfoTestRun = async () => {
   process.env.userDataPath = '.';
@@ -78,117 +79,202 @@ const getDeviceInfoTestRun = async () => {
   });
 };
 
-// const fetchLogsTestRun = async () => {
-//   process.env.userDataPath = '.';
-//   const logFetcher = new LogsFetcher();
-//   const { connection } = await createPort();
-//   await connection.beforeOperation();
+const addCoinTestRun = async () => {
+  process.env.userDataPath = '.';
+  const addCoin = new CoinAdder();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
 
-//   const packetVersion = await connection.selectPacketVersion();
-//   console.log({ packetVersion });
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
 
-//   logFetcher.addListener('error', error => {
-//     console.log('In Error');
-//     console.log(error);
-//   });
+  addCoin.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
 
-//   logFetcher.addListener('acceptedRequest', val => {
-//     console.log({ acceptedRequest: val });
-//   });
+  addCoin.addListener('coinsConfirmed', val => {
+    console.log({ coinsConfirmed: val });
+  });
 
-//   logFetcher.addListener('completed', val => {
-//     console.log({ completed: val });
-//   });
+  addCoin.addListener('passphraseEntered', val => {
+    console.log({ passphraseEntered: val });
+  });
 
-//   await logFetcher.run({
-//     connection,
-//     firmwareVersion: '1.0.0',
-//     sdkVersion: '1.0.0',
-//   });
-// };
+  addCoin.addListener('pinEntered', val => {
+    console.log({ pinEntered: val });
+  });
 
-// const cardAuthTestRun = async () => {
-//   const cardAuthenticator = new CardAuthenticator();
-//   const { connection } = await createPort();
-//   await connection.beforeOperation();
+  addCoin.addListener('cardTapped', val => {
+    console.log({ cardTapped: val });
+  });
 
-//   const packetVersion = await connection.selectPacketVersion();
-//   console.log({ packetVersion });
+  addCoin.addListener('locked', val => {
+    console.log({ locked: val });
+  });
 
-//   cardAuthenticator.addListener('error', error => {
-//     console.log('In Error');
-//     console.log(error);
-//   });
+  addCoin.addListener('noWalletFound', val => {
+    console.log({ noWalletFound: val });
+  });
 
-//   cardAuthenticator.addListener('acceptedRequest', val => {
-//     console.log({ acceptedRequest: val });
-//   });
+  addCoin.addListener('xpubList', val => {
+    console.log({ xpubList: val });
+  });
 
-//   cardAuthenticator.addListener('verified', val => {
-//     console.log({ verified: val });
-//   });
+  await addCoin.run({
+    connection,
+    sdkVersion: '1.0.0',
+    walletId:
+      'C372AF88F64E0A40439F97EE98A3A0A03E9B2AC348B464D0CAB7F32EE8482298',
+    isResync: false,
+    pinExists: false,
+    passphraseExists: false,
+    selectedCoins: ['btc']
+  });
+};
 
-//   cardAuthenticator.addListener('cardError', () => {
-//     console.log({ error: 'Card Error' });
-//   });
+const fetchLogsTestRun = async () => {
+  process.env.userDataPath = '.';
+  const logFetcher = new LogsFetcher();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
 
-//   cardAuthenticator.addListener('serialSigned', val => {
-//     console.log({ msg: 'Serial is signed', val });
-//   });
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
 
-//   cardAuthenticator.addListener('error', val => {
-//     console.log({ msg: 'Error occurred' });
-//     console.log(val);
-//   });
+  logFetcher.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
 
-//   await cardAuthenticator.run({
-//     connection,
-//     firmwareVersion: '1.0.0',
-//     sdkVersion: '1.0.0',
-//     cardNumber: '01',
-//     isTestApp: false
-//   });
-// };
+  logFetcher.addListener('acceptedRequest', val => {
+    console.log({ acceptedRequest: val });
+  });
 
-// const deviceAuthTestRun = async () => {
-//   const deviceAuthenticator = new DeviceAuthenticator();
-//   const { connection } = await createPort();
-//   await connection.beforeOperation();
-//   const packetVersion = await connection.selectPacketVersion();
-//   console.log({ packetVersion });
+  logFetcher.addListener('completed', val => {
+    console.log({ completed: val });
+  });
 
-//   deviceAuthenticator.addListener('error', error => {
-//     console.log('In Error');
-//     console.log(error);
-//   });
+  await logFetcher.run({
+    connection,
+    firmwareVersion: '1.0.0',
+    sdkVersion: '1.0.0'
+  });
+};
 
-//   deviceAuthenticator.addListener('acceptedRequest', val => {
-//     console.log({ acceptedRequest: val });
-//   });
+const cardAuthTestRun = async () => {
+  const cardAuthenticator = new CardAuthenticator();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
 
-//   deviceAuthenticator.addListener('verified', val => {
-//     console.log({ verified: val });
-//   });
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
 
-//   deviceAuthenticator.addListener('cardError', () => {
-//     console.log({ error: 'Card Error' });
-//   });
+  cardAuthenticator.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
 
-//   deviceAuthenticator.addListener('serial', val => {
-//     console.log({ msg: 'Serial', val });
-//   });
+  cardAuthenticator.addListener('acceptedRequest', val => {
+    console.log({ acceptedRequest: val });
+  });
 
-//   deviceAuthenticator.addListener('error', val => {
-//     console.log({ msg: 'Error occurred' });
-//     console.log(val);
-//   });
+  cardAuthenticator.addListener('verified', val => {
+    console.log({ verified: val });
+  });
 
-//   await deviceAuthenticator.run({
-//     connection,
-//     firmwareVersion: '1.0.0',
-//     sdkVersion: '1.0.0',
-//     inTestApp: false
-//   });
-// };
+  cardAuthenticator.addListener('cardError', () => {
+    console.log({ error: 'Card Error' });
+  });
 
-getDeviceInfoTestRun();
+  cardAuthenticator.addListener('serialSigned', val => {
+    console.log({ msg: 'Serial is signed', val });
+  });
+
+  cardAuthenticator.addListener('error', val => {
+    console.log({ msg: 'Error occurred' });
+    console.log(val);
+  });
+
+  await cardAuthenticator.run({
+    connection,
+    firmwareVersion: '1.0.0',
+    sdkVersion: '1.0.0',
+    cardNumber: '01',
+    isTestApp: false
+  });
+};
+
+const deviceAuthTestRun = async () => {
+  const deviceAuthenticator = new DeviceAuthenticator();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
+
+  deviceAuthenticator.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
+
+  deviceAuthenticator.addListener('acceptedRequest', val => {
+    console.log({ acceptedRequest: val });
+  });
+
+  deviceAuthenticator.addListener('verified', val => {
+    console.log({ verified: val });
+  });
+
+  deviceAuthenticator.addListener('cardError', () => {
+    console.log({ error: 'Card Error' });
+  });
+
+  deviceAuthenticator.addListener('serial', val => {
+    console.log({ msg: 'Serial', val });
+  });
+
+  deviceAuthenticator.addListener('error', val => {
+    console.log({ msg: 'Error occurred' });
+    console.log(val);
+  });
+
+  await deviceAuthenticator.run({
+    connection,
+    firmwareVersion: '1.0.0',
+    sdkVersion: '1.0.0',
+    inTestApp: false
+  });
+};
+
+const run = async (
+  flow:
+    | 'addCoin'
+    | 'cardAuth'
+    | 'deviceAuth'
+    | 'getDeviceInfo'
+    | 'addWallet'
+    | 'fetchLogs'
+) => {
+  switch (flow) {
+    case 'cardAuth':
+      await cardAuthTestRun();
+      break;
+    case 'deviceAuth':
+      await deviceAuthTestRun();
+      break;
+    case 'getDeviceInfo':
+      await getDeviceInfoTestRun();
+      break;
+    case 'fetchLogs':
+      await fetchLogsTestRun();
+      break;
+    case 'addWallet':
+      await addWalletTestRun();
+      break;
+    case 'addCoin':
+      await addCoinTestRun();
+      break;
+  }
+};
+
+run('addCoin');

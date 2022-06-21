@@ -108,17 +108,17 @@ export class GetDeviceInfo extends CyFlow {
     let sdkVersion = '0.0.0';
     let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
-      commandType: 88,
+      commandType: 87,
       data: '00',
       sequenceNumber
     });
     const sdkVersionData = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 88,
+      commandType: 87,
       onStatus: () => {}
     });
 
-    if (sdkVersionData.commandType !== 88) {
+    if (sdkVersionData.commandType !== 87) {
       throw new Error('Invalid commandType');
     }
 
