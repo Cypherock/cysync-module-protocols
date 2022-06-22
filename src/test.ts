@@ -5,6 +5,7 @@ import { WalletAdder } from './app';
 import { LogsFetcher } from './app';
 import { GetDeviceInfo } from './app';
 import { CoinAdder } from './app';
+import { CancelFlow } from './app';
 
 const addWalletTestRun = async () => {
   process.env.userDataPath = '.';
@@ -246,6 +247,19 @@ const deviceAuthTestRun = async () => {
   });
 };
 
+const abortCommand = async () => {
+  const abort = new CancelFlow();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
+
+  await abort.run({
+    connection,
+    sdkVersion: '1.0.0'
+  });
+};
+
 const run = async (
   flow:
     | 'addCoin'
@@ -254,6 +268,7 @@ const run = async (
     | 'getDeviceInfo'
     | 'addWallet'
     | 'fetchLogs'
+    | 'abort'
 ) => {
   switch (flow) {
     case 'cardAuth':
@@ -274,7 +289,10 @@ const run = async (
     case 'addCoin':
       await addCoinTestRun();
       break;
+    case 'abort':
+      await abortCommand();
+      break;
   }
 };
 
-run('addCoin');
+run('abort');

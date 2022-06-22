@@ -1,8 +1,8 @@
 export * from './error';
 import {
   DeviceConnection,
+  DeviceIdleState,
   PacketVersionMap
-  // DeviceIdleState
 } from '@cypherock/communication';
 import { EventEmitter } from 'events';
 
@@ -47,9 +47,8 @@ export abstract class CyFlow extends EventEmitter {
         const version = connection.getPacketVersion();
 
         if (version === PacketVersionMap.v3) {
-          await connection.getStatus();
-          // resolve(status.deviceIdleState === DeviceIdleState.IDLE);
-          resolve(true);
+          const status = await connection.getStatus();
+          resolve(status.deviceIdleState === DeviceIdleState.IDLE);
         } else {
           await connection.sendData(41, '00', 2);
           connection
@@ -125,25 +124,34 @@ export abstract class CyFlow extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.cancelled = true;
       if (connection && connection.isOpen()) {
-        connection
-          .sendData(42, '04')
-          .then(() => {
-            logger.info('Desktop sent abort command');
+        const packetVersion = connection.getPacketVersion();
+        if (packetVersion === PacketVersionMap.v3) {
+          const sequenceNumber = connection.getNewSequenceNumber();
+          connection
+            .sendAbort(sequenceNumber)
+            .then(() => resolve(true))
+            .catch(e => reject(e));
+        } else {
+          connection
+            .sendData(42, '04')
+            .then(() => {
+              logger.info('Desktop sent abort command');
 
-            // Closing connection will cause the `run` function to result in an error.
-            connection
-              .afterOperation()
-              .then(() => {})
-              .catch(() => {})
-              .finally(() => resolve(true));
-          })
-          .catch(e => {
-            connection
-              .afterOperation()
-              .then(() => {})
-              .catch(() => {})
-              .finally(() => reject(e));
-          });
+              // Closing connection will cause the `run` function to result in an error.
+              connection
+                .afterOperation()
+                .then(() => {})
+                .catch(() => {})
+                .finally(() => resolve(true));
+            })
+            .catch(e => {
+              connection
+                .afterOperation()
+                .then(() => {})
+                .catch(() => {})
+                .finally(() => reject(e));
+            });
+        }
       } else {
         resolve(false);
       }

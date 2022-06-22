@@ -111,13 +111,6 @@ export class WalletAdder extends CyFlow {
     const walletDetails = extractWalletDetails(rawWalletDetails);
     logger.info('Wallet Details', { walletDetails });
     this.emit('walletDetails', walletDetails);
-
-    sequenceNumber = connection.getNewSequenceNumber();
-    await connection.sendCommand({
-      commandType: 42,
-      data: '01',
-      sequenceNumber
-    });
   }
 
   /**

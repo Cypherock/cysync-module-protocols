@@ -252,12 +252,6 @@ export class CoinAdder extends CyFlow {
       throw new Error('Invalid commandType');
     }
 
-    sequenceNumber = connection.getNewSequenceNumber();
-    await connection.sendCommand({
-      commandType: 42,
-      data: '01',
-      sequenceNumber
-    });
     if (!isResync) {
       const xpubList = await formatCoinsForDB(
         walletId,

@@ -126,21 +126,21 @@ export class GetDeviceInfo extends CyFlow {
 
     this.emit('sdkVersion', sdkVersion);
 
-    if (!ALL_SUPPORTED_SDK_VERSIONS.includes(sdkVersion)) {
-      /* `sdkNotSupported` will be emitted with the following parameters:
-       * app: If the cysync needs to be updated
-       * device: If the device needs to be updated
-       * undefined: If we cannot determine the cause. (Both should be updated)
-       */
-      if (sdkVersion > LATEST_SUPPORTED_SDK_VERSION) {
-        this.emit('sdkNotSupported', 'app');
-      } else if (sdkVersion < OLDEST_SUPPORTED_SDK_VERSION) {
-        this.emit('sdkNotSupported', 'device');
-      } else {
-        this.emit('sdkNotSupported');
-      }
-      throw new Error('SDK not supported');
-    }
+    // if (!ALL_SUPPORTED_SDK_VERSIONS.includes(sdkVersion)) {
+    //   /* `sdkNotSupported` will be emitted with the following parameters:
+    //    * app: If the cysync needs to be updated
+    //    * device: If the device needs to be updated
+    //    * undefined: If we cannot determine the cause. (Both should be updated)
+    //    */
+    //   if (sdkVersion > LATEST_SUPPORTED_SDK_VERSION) {
+    //     this.emit('sdkNotSupported', 'app');
+    //   } else if (sdkVersion < OLDEST_SUPPORTED_SDK_VERSION) {
+    //     this.emit('sdkNotSupported', 'device');
+    //   } else {
+    //     this.emit('sdkNotSupported');
+    //   }
+    //   throw new Error('SDK not supported');
+    // }
 
     sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
