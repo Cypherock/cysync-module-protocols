@@ -1,4 +1,4 @@
-import { COINS } from '@cypherock/communication';
+import { COINS, EthCoinData } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
@@ -43,7 +43,7 @@ export class TransactionReceiver extends CyFlow {
         throw new Error(`Invalid coinType ${coinType}`);
       }
 
-      if (coin.isEth) {
+      if (coin instanceof EthCoinData) {
         wallet = newWallet({
           coinType,
           xpub,
@@ -156,7 +156,7 @@ export class TransactionReceiver extends CyFlow {
           const addressHex = addressesVerified.data.slice(2);
           let address = '';
 
-          if (coin.isEth) {
+          if (coin instanceof EthCoinData) {
             address = `0x${addressHex.toLowerCase()}`;
           } else {
             address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
