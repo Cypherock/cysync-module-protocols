@@ -127,14 +127,24 @@ export class TransactionSender extends CyFlow {
       } else if (coin instanceof NearCoinData) {
         wallet = new NearWallet(xpub, coin);
         metaData = await wallet.generateMetaData(fee);
+        const { network } = coin;
 
         const txnData = await wallet.generateUnsignedTransaction(
           outputList[0].address,
           outputList[0].value
         );
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
+        if (fee) {
+          feeRate = fee;
+        } else {
+          logger.info(`Fetching optimal fees from the internet.`);
+          const res = await Server.near.transaction
+            .getFees({ network })
+            .request();
+          feeRate = res.data;
+        }
 
-        totalFees = fee;
+        totalFees = feeRate;
       } else {
         wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 
