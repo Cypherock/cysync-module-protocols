@@ -1,4 +1,4 @@
-import { COINS, EthCoinData } from '@cypherock/communication';
+import { COINS, EthCoinData, NearCoinData } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
@@ -158,6 +158,8 @@ export class TransactionReceiver extends CyFlow {
 
           if (coin instanceof EthCoinData) {
             address = `0x${addressHex.toLowerCase()}`;
+          } else if (coin instanceof NearCoinData) {
+            address = addressHex.toLowerCase();
           } else {
             address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
           }
