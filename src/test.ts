@@ -6,6 +6,7 @@ import { LogsFetcher } from './app';
 import { GetDeviceInfo } from './app';
 import { CoinAdder } from './app';
 import { CancelFlow } from './app';
+import { TransactionReceiver } from './app';
 
 const addWalletTestRun = async () => {
   process.env.userDataPath = '.';
@@ -131,6 +132,73 @@ const addCoinTestRun = async () => {
     pinExists: false,
     passphraseExists: false,
     selectedCoins: ['btc']
+  });
+};
+
+const receiveAddressTestRun = async () => {
+  process.env.userDataPath = '.';
+  const receiveTxn = new TransactionReceiver();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
+
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
+
+  receiveTxn.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
+
+  receiveTxn.addListener('coinsConfirmed', val => {
+    console.log({ coinsConfirmed: val });
+  });
+
+  receiveTxn.addListener('passphraseEntered', val => {
+    console.log({ passphraseEntered: val });
+  });
+
+  receiveTxn.addListener('pinEntered', val => {
+    console.log({ pinEntered: val });
+  });
+
+  receiveTxn.addListener('cardTapped', val => {
+    console.log({ cardTapped: val });
+  });
+
+  receiveTxn.addListener('locked', val => {
+    console.log({ locked: val });
+  });
+
+  receiveTxn.addListener('noWalletFound', val => {
+    console.log({ noWalletFound: val });
+  });
+
+  receiveTxn.addListener('xpubList', val => {
+    console.log({ xpubList: val });
+  });
+
+  receiveTxn.addListener('derivationPathSent', val => {
+    console.log({ derivationPathSent: val });
+  });
+
+  receiveTxn.addListener('receiveAddress', val => {
+    console.log({ address: val });
+  });
+
+  receiveTxn.addListener('addressVerified', val => {
+    console.log({ addressVerified: val });
+  });
+
+  await receiveTxn.run({
+    connection,
+    sdkVersion: '1.0.0',
+    walletId:
+      'C372AF88F64E0A40439F97EE98A3A0A03E9B2AC348B464D0CAB7F32EE8482298',
+    pinExists: false,
+    passphraseExists: false,
+    xpub: '',
+    addressDB: '' as any,
+    coinType: 'btc'
   });
 };
 
@@ -269,6 +337,7 @@ const run = async (
     | 'addWallet'
     | 'fetchLogs'
     | 'abort'
+    | 'receiveTxn'
 ) => {
   switch (flow) {
     case 'cardAuth':
@@ -289,10 +358,13 @@ const run = async (
     case 'addCoin':
       await addCoinTestRun();
       break;
+    case 'receiveTxn':
+      await receiveAddressTestRun();
+      break;
     case 'abort':
       await abortCommand();
       break;
   }
 };
 
-run('abort');
+run('receiveTxn');

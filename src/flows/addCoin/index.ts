@@ -170,7 +170,6 @@ export class CoinAdder extends CyFlow {
     let pinEnteredState = 0;
     let cardTapState = 0;
 
-    // const data = await connection.waitForCommandOutput([46, 75, 76], 30000);
     const data = await connection.waitForCommandOutput({
       sequenceNumber,
       commandType: 45,
