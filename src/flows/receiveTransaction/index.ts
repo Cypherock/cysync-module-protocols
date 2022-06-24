@@ -5,7 +5,7 @@ import {
   CmdState
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
-// import newWallet from '@cypherock/wallet';
+import newWallet from '@cypherock/wallet';
 
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
@@ -198,7 +198,8 @@ export class TransactionReceiver extends CyFlow {
     let pinEnteredState = 0;
     let cardTapState = 0;
 
-    // const data = await connection.waitForCommandOutput([63, 65, 75, 76], 30000);
+    this.emit('receiveAddress', receiveAddress);
+
     const addressVerified = await connection.waitForCommandOutput({
       sequenceNumber,
       commandType: 59,
@@ -282,8 +283,6 @@ export class TransactionReceiver extends CyFlow {
       throw new Error('Invalid commandType');
     }
 
-    this.emit('receiveAddress', receiveAddress);
-    // const addressesVerified = await connection.receiveData([64], 60000);
     if (addressVerified.data.startsWith('01')) {
       const addressHex = addressVerified.data.slice(2);
       let address = '';
@@ -306,53 +305,50 @@ export class TransactionReceiver extends CyFlow {
   async run(params: TransactionReceiverRunOptions) {
     const {
       connection,
-      // addressDB,
-      // walletId,
-      // coinType,
-      // xpub,
-      // zpub,
-      // contractAbbr = 'ETH'
+      addressDB,
+      walletId,
+      coinType,
+      xpub,
+      zpub,
+      contractAbbr = 'ETH'
     } = params;
 
     let flowInterupted = false;
     try {
       this.cancelled = false;
-      //let receiveAddress = '';
-      //let receiveAddressPath = '';
-      //let wallet: any;
+      let receiveAddress = '';
+      let receiveAddressPath = '';
+      let wallet: any;
 
-      //const coin = COINS[coinType];
+      const coin = COINS[coinType];
 
-      //if (!coin) {
-      //  throw new Error(`Invalid coinType ${coinType}`);
-      //}
+      if (!coin) {
+        throw new Error(`Invalid coinType ${coinType}`);
+      }
 
-      //if (coin instanceof EthCoinData) {
-      //  wallet = newWallet({
-      //    coinType,
-      //    xpub,
-      //    walletId,
-      //    zpub,
-      //    addressDB
-      //  });
-      //  receiveAddress = wallet.newReceiveAddress().toUpperCase();
-      //  //To make the first x in lowercase
-      //  receiveAddress = '0x' + receiveAddress.slice(2);
-      //  receiveAddressPath = await wallet.getDerivationPath(contractAbbr);
-      //} else {
-      //  wallet = newWallet({
-      //    coinType,
-      //    xpub,
-      //    walletId,
-      //    zpub,
-      //    addressDB
-      //  });
-      //  receiveAddress = await wallet.newReceiveAddress();
-      //  receiveAddressPath = await wallet.getDerivationPath(receiveAddress);
-      //}
-      const receiveAddress = 'bc1qeqfj79du8ewlqg3ld97e5a2e5t52q4fjlf2kwx';
-      const receiveAddressPath =
-        '8000005480000000800000000000000000000006000000000000000000';
+      if (coin instanceof EthCoinData) {
+        wallet = newWallet({
+          coinType,
+          xpub,
+          walletId,
+          zpub,
+          addressDB
+        });
+        receiveAddress = wallet.newReceiveAddress().toUpperCase();
+        //To make the first x in lowercase
+        receiveAddress = '0x' + receiveAddress.slice(2);
+        receiveAddressPath = await wallet.getDerivationPath(contractAbbr);
+      } else {
+        wallet = newWallet({
+          coinType,
+          xpub,
+          walletId,
+          zpub,
+          addressDB
+        });
+        receiveAddress = await wallet.newReceiveAddress();
+        receiveAddressPath = await wallet.getDerivationPath(receiveAddress);
+      }
 
       await this.onStart(connection);
 
