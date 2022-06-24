@@ -23,6 +23,7 @@ export interface CyFlowRunOptions {
  * @extends EventEmitter
  */
 export abstract class CyFlow extends EventEmitter {
+  protected flowInterupted: boolean;
   public cancelled: boolean;
 
   /**
@@ -31,6 +32,7 @@ export abstract class CyFlow extends EventEmitter {
   constructor() {
     super();
     this.cancelled = false;
+    this.flowInterupted = false;
   }
 
   async run(_options: CyFlowRunOptions): Promise<any> {
