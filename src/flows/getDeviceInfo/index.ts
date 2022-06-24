@@ -102,7 +102,7 @@ export class GetDeviceInfo extends CyFlow {
 
   async runOperation({
     connection,
-    deviceDB
+    // deviceDB
   }: GetDeviceInfoRunOptions & { packetVersion: PacketVersion }) {
     // If the packet version is `v1`, then the sdk version will default to `0.0.0`
     let sdkVersion = '0.0.0';
@@ -158,17 +158,17 @@ export class GetDeviceInfo extends CyFlow {
       throw new Error('Invalid commandType');
     }
 
-    const isAuthenticated = data.data.slice(0, 2);
+    // const isAuthenticated = data.data.slice(0, 2);
     const serial = data.data.slice(2, 64 + 2);
     const firmwareVersion = data.data.slice(64 + 2, 64 + 2 + 8);
 
     const firmwareV = (firmwareVersion + '').toLowerCase();
     this.emit('firmwareVersion', firmwareV);
 
-    if (isAuthenticated === '00') {
-      this.emit('auth', false);
-      throw new ExitFlowError();
-    }
+    // if (isAuthenticated === '00') {
+    //   this.emit('auth', false);
+    //   throw new ExitFlowError();
+    // }
 
     if (serial.search(/[^0]/) === -1) {
       throw new Error('Invalid Serial returned from device');
@@ -177,21 +177,21 @@ export class GetDeviceInfo extends CyFlow {
     const deviceSerial = (serial + '').toLowerCase();
     this.emit('serial', deviceSerial);
 
-    const dbDevice = await deviceDB.getBySerial(deviceSerial);
+    // const dbDevice = await deviceDB.getBySerial(deviceSerial);
 
-    if (!dbDevice) {
-      this.emit('isNew', true);
-      this.emit('auth', false);
-      throw new ExitFlowError();
-    }
+    // if (!dbDevice) {
+    //   this.emit('isNew', true);
+    //   this.emit('auth', false);
+    //   throw new ExitFlowError();
+    // }
 
-    if (dbDevice.isAuth) {
+    // if (dbDevice.isAuth) {
       this.emit('lastAuth', true);
       this.emit('auth', true);
-    } else {
-      this.emit('lastAuth', false);
-      this.emit('auth', false);
-    }
+    // } else {
+    //   this.emit('lastAuth', false);
+    //   this.emit('auth', false);
+    // }
   }
 
   async run(params: GetDeviceInfoRunOptions) {
