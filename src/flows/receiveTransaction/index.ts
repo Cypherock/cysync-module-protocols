@@ -2,7 +2,8 @@ import {
   COINS,
   EthCoinData,
   PacketVersionMap,
-  CmdState
+  CmdState,
+  CoinGroup
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
@@ -40,6 +41,23 @@ enum RECEIVE_TRANSACTION_STATUS {
   RECV_TXN_DISPLAY_ADDR,
   RECV_TXN_WAITING_SCREEN,
   RECV_TXN_FINAL_SCREEN
+}
+
+enum RECEIVE_TRANSACTION_STATUS_ETH {
+  RECV_TXN_FIND_XPUB_ETH = 1,
+  RECV_TXN_XPUB_NOT_FOUND_ETH,
+  RECV_TXN_ENTER_PIN_ETH,
+  RECV_TXN_ENTER_PASSPHRASE_ETH,
+  RECV_TXN_CONFIRM_PASSPHRASE_ETH,
+  RECV_TXN_CHECK_PIN_ETH,
+  RECV_TXN_TAP_CARD_ETH,
+  RECV_TXN_TAP_CARD_SEND_CMD_ETH,
+  RECV_TXN_READ_DEVICE_SHARE_ETH,
+  RECV_TXN_DERIVE_ADD_SCREEN_ETH,
+  RECV_TXN_DERIVE_ADD_ETH,
+  RECV_TXN_DISPLAY_ADDR_ETH,
+  RECV_TXN_WAITING_SCREEN_ETH,
+  RECV_TXN_FINAL_SCREEN_ETH
 }
 
 export class TransactionReceiver extends CyFlow {
@@ -200,6 +218,27 @@ export class TransactionReceiver extends CyFlow {
 
     this.emit('receiveAddress', receiveAddress);
 
+    const isEth = [CoinGroup.Ethereum, CoinGroup.Ethereum].includes(coin.group);
+    let requestAcceptedCmdStatus: number =
+      RECEIVE_TRANSACTION_STATUS.RECV_TXN_FIND_XPUB;
+    let passphraseEnteredCmdStatus: number =
+      RECEIVE_TRANSACTION_STATUS.RECV_TXN_CONFIRM_PASSPHRASE;
+    let pinEnteredCmdStatus: number =
+      RECEIVE_TRANSACTION_STATUS.RECV_TXN_ENTER_PIN;
+    let cardTapCmdStatus: number =
+      RECEIVE_TRANSACTION_STATUS.RECV_TXN_TAP_CARD_SEND_CMD;
+
+    if (isEth) {
+      requestAcceptedCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_FIND_XPUB_ETH;
+      passphraseEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_CONFIRM_PASSPHRASE_ETH;
+      pinEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_CHECK_PIN_ETH;
+      cardTapCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_TAP_CARD_SEND_CMD_ETH;
+    }
+
     const addressVerified = await connection.waitForCommandOutput({
       sequenceNumber,
       commandType: 59,
@@ -210,7 +249,7 @@ export class TransactionReceiver extends CyFlow {
         }
 
         if (
-          status.cmdStatus >= RECEIVE_TRANSACTION_STATUS.RECV_TXN_FIND_XPUB &&
+          status.cmdStatus >= requestAcceptedCmdStatus &&
           requestAcceptedState === 0
         ) {
           requestAcceptedState = 1;
@@ -218,8 +257,7 @@ export class TransactionReceiver extends CyFlow {
 
         if (
           passphraseExists &&
-          status.cmdStatus >=
-            RECEIVE_TRANSACTION_STATUS.RECV_TXN_CONFIRM_PASSPHRASE &&
+          status.cmdStatus >= passphraseEnteredCmdStatus &&
           passphraseEnteredState === 0
         ) {
           passphraseEnteredState = 1;
@@ -227,17 +265,13 @@ export class TransactionReceiver extends CyFlow {
 
         if (
           pinExists &&
-          status.cmdStatus >= RECEIVE_TRANSACTION_STATUS.RECV_TXN_ENTER_PIN &&
+          status.cmdStatus >= pinEnteredCmdStatus &&
           pinEnteredState === 0
         ) {
           pinEnteredState = 1;
         }
 
-        if (
-          status.cmdStatus >=
-            RECEIVE_TRANSACTION_STATUS.RECV_TXN_TAP_CARD_SEND_CMD &&
-          cardTapState === 0
-        ) {
+        if (status.cmdStatus >= cardTapCmdStatus && cardTapState === 0) {
           cardTapState = 1;
         }
 
@@ -353,8 +387,6 @@ export class TransactionReceiver extends CyFlow {
       await this.onStart(connection);
 
       const ready = await this.deviceReady(connection);
-
-      console.log({ receiveAddress, receiveAddressPath });
 
       if (ready) {
         const packetVersion = connection.getPacketVersion();
