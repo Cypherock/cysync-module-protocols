@@ -7,6 +7,7 @@ import { GetDeviceInfo } from './app';
 import { CoinAdder } from './app';
 import { CancelFlow } from './app';
 import { TransactionReceiver } from './app';
+import { DeviceUpdater } from './app';
 
 const addWalletTestRun = async () => {
   process.env.userDataPath = '.';
@@ -315,6 +316,39 @@ const deviceAuthTestRun = async () => {
   });
 };
 
+const deviceUpgradeTestRun = async () => {
+  const deviceUpdater = new DeviceUpdater();
+  const { connection } = await createPort();
+  await connection.beforeOperation();
+  const packetVersion = await connection.selectPacketVersion();
+  console.log({ packetVersion });
+
+  deviceUpdater.addListener('error', error => {
+    console.log('In Error');
+    console.log(error);
+  });
+
+  deviceUpdater.addListener('updateConfirmed', val => {
+    console.log({ acceptedRequest: val });
+  });
+
+  deviceUpdater.addListener('notReady', val => {
+    console.log({ notReady: val });
+  });
+
+  deviceUpdater.addListener('error', val => {
+    console.log({ msg: 'Error occurred' });
+    console.log(val);
+  });
+
+  await deviceUpdater.run({
+    connection,
+    firmwareVersion: '01000000',
+    sdkVersion: '1.0.0',
+    firmwarePath: './app_dfu_package.bin'
+  });
+};
+
 const abortCommand = async () => {
   const abort = new CancelFlow();
   const { connection } = await createPort();
@@ -338,6 +372,7 @@ const run = async (
     | 'fetchLogs'
     | 'abort'
     | 'receiveTxn'
+    | 'deviceUpgrade'
 ) => {
   switch (flow) {
     case 'cardAuth':
@@ -361,10 +396,13 @@ const run = async (
     case 'receiveTxn':
       await receiveAddressTestRun();
       break;
+    case 'deviceUpgrade':
+      await deviceUpgradeTestRun();
+      break;
     case 'abort':
       await abortCommand();
       break;
   }
 };
 
-run('receiveTxn');
+run('deviceUpgrade');
