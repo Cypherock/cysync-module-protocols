@@ -65,7 +65,8 @@ export class WalletAdder extends CyFlow {
     let requestAcceptedState = 0;
 
     let data = await connection.waitForCommandOutput({
-      commandType: 43,
+      executingCommandTypes: [43],
+      expectedCommandTypes: [44, 76],
       sequenceNumber,
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
@@ -86,10 +87,6 @@ export class WalletAdder extends CyFlow {
         }
       }
     });
-
-    if (![44, 76].includes(data.commandType)) {
-      throw new Error('Invalid command type');
-    }
 
     if (data.commandType === 76) {
       if (data.data.startsWith('00')) {

@@ -136,7 +136,8 @@ export class CardAuthenticator extends CyFlow {
 
     const cardData = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 70,
+      executingCommandTypes: [70],
+      expectedCommandTypes: [70, 13],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
           this.emit('acceptedRequest', false);
@@ -161,8 +162,6 @@ export class CardAuthenticator extends CyFlow {
     if (cardData.commandType === 70 && cardData.data.startsWith('00')) {
       this.emit('cardError');
       throw new ExitFlowError();
-    } else if (cardData.commandType !== 13) {
-      throw new Error('Invalid command received');
     }
 
     const serial = cardData.data.slice(128).toUpperCase();
@@ -200,15 +199,14 @@ export class CardAuthenticator extends CyFlow {
 
     const challengeHash = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 16,
+      executingCommandTypes: [16],
+      expectedCommandTypes: [70, 17],
       onStatus: () => {}
     });
 
     if (challengeHash.commandType === 70) {
       this.emit('cardError');
       throw new ExitFlowError();
-    } else if (challengeHash.commandType !== 17) {
-      throw new Error('Invalid command received');
     }
 
     this.emit('challengeSigned', true);
@@ -245,7 +243,8 @@ export class CardAuthenticator extends CyFlow {
     if (isTestApp) {
       const pairing = await connection.waitForCommandOutput({
         sequenceNumber,
-        commandType: 42,
+        executingCommandTypes: [42],
+        expectedCommandTypes: [70],
         onStatus: () => {}
       });
 

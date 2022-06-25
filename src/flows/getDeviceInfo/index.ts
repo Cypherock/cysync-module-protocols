@@ -101,9 +101,9 @@ export class GetDeviceInfo extends CyFlow {
   }
 
   async runOperation({
-    connection,
-    // deviceDB
-  }: GetDeviceInfoRunOptions & { packetVersion: PacketVersion }) {
+    connection
+  }: // deviceDB
+  GetDeviceInfoRunOptions & { packetVersion: PacketVersion }) {
     // If the packet version is `v1`, then the sdk version will default to `0.0.0`
     let sdkVersion = '0.0.0';
     let sequenceNumber = connection.getNewSequenceNumber();
@@ -114,13 +114,10 @@ export class GetDeviceInfo extends CyFlow {
     });
     const sdkVersionData = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 87,
+      executingCommandTypes: [87],
+      expectedCommandTypes: [87],
       onStatus: () => {}
     });
-
-    if (sdkVersionData.commandType !== 87) {
-      throw new Error('Invalid commandType');
-    }
 
     sdkVersion = formatSDKVersion(sdkVersionData.data);
 
@@ -150,13 +147,10 @@ export class GetDeviceInfo extends CyFlow {
     });
     const data = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 87,
+      executingCommandTypes: [87],
+      expectedCommandTypes: [87],
       onStatus: () => {}
     });
-
-    if (data.commandType !== 87) {
-      throw new Error('Invalid commandType');
-    }
 
     // const isAuthenticated = data.data.slice(0, 2);
     const serial = data.data.slice(2, 64 + 2);
@@ -186,8 +180,8 @@ export class GetDeviceInfo extends CyFlow {
     // }
 
     // if (dbDevice.isAuth) {
-      this.emit('lastAuth', true);
-      this.emit('auth', true);
+    this.emit('lastAuth', true);
+    this.emit('auth', true);
     // } else {
     //   this.emit('lastAuth', false);
     //   this.emit('auth', false);

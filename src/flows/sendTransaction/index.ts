@@ -435,7 +435,8 @@ export class TransactionSender extends CyFlow {
 
     const receivedData = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 50,
+      executingCommandTypes: [50],
+      expectedCommandTypes: [75, 76, 51],
       onStatus
     });
 
@@ -456,16 +457,18 @@ export class TransactionSender extends CyFlow {
       throw new ExitFlowError();
     }
 
-    if (receivedData.commandType !== 51) {
-      throw new Error('Invalid commandType');
-    }
-
+    const coinsConfirmed = receivedData.data.slice(0, 2);
     const acceptableTxnSize = parseInt(receivedData.data.slice(2), 16) * 2;
     logger.info('Acceptable Txn size', { acceptableTxnSize });
 
     if (acceptableTxnSize < unsignedTransaction.length) {
       this.emit('txnTooLarge');
       this.flowInterupted = true;
+      throw new ExitFlowError();
+    }
+
+    if (coinsConfirmed === '00') {
+      this.emit('coinsConfirmed', false);
       throw new ExitFlowError();
     }
 
@@ -486,13 +489,10 @@ export class TransactionSender extends CyFlow {
     if (!(coin instanceof EthCoinData)) {
       const utxoRequest = await connection.waitForCommandOutput({
         sequenceNumber,
-        commandType: 52,
+        executingCommandTypes: [52],
+        expectedCommandTypes: [51],
         onStatus: () => {}
       });
-
-      if (utxoRequest.commandType !== 51) {
-        throw new Error('Invalid commandType');
-      }
 
       if (utxoRequest.data !== '02') {
         throw new Error('Invalid data from device');
@@ -507,27 +507,16 @@ export class TransactionSender extends CyFlow {
         });
         const utxoResponse = await connection.waitForCommandOutput({
           sequenceNumber,
-          commandType: 52,
+          executingCommandTypes: [52],
+          expectedCommandTypes: [51],
           onStatus: () => {}
         });
 
-        if (utxoResponse.commandType !== 51) {
-          throw new Error('Invalid commandType');
-        }
         if (utxoResponse.data.startsWith('00')) {
           throw new Error('UTXO was not verified');
         }
       }
     }
-
-    // const recipientVerified = await connection.waitForCommandOutput({
-    //   sequenceNumber,
-    //   commandType: 52,
-    //   onStatus
-    // });
-    // if (recipientVerified.commandType !== 53) {
-    //   throw new Error('Invalid commandType');
-    // }
 
     if (wallet instanceof EthereumWallet) {
       if (!(coin instanceof EthCoinData)) {
@@ -536,9 +525,23 @@ export class TransactionSender extends CyFlow {
 
       const signedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        commandType: 52,
+        executingCommandTypes: [52],
+        expectedCommandTypes: [54, 79, 81, 71, 53],
         onStatus
       });
+
+      if (signedTxn.commandType === 79 || signedTxn.commandType === 53) {
+        this.emit('coinsConfirmed', false);
+        throw new ExitFlowError();
+      }
+      if (signedTxn.commandType === 81) {
+        this.emit('noWalletOnCard');
+        throw new ExitFlowError();
+      }
+      if (signedTxn.commandType === 71) {
+        this.emit('cardError');
+        throw new ExitFlowError();
+      }
 
       sequenceNumber = connection.getNewSequenceNumber();
       await connection.sendCommand({
@@ -571,9 +574,24 @@ export class TransactionSender extends CyFlow {
       for (const _ of txnInfo.inputs) {
         const inputSig = await connection.waitForCommandOutput({
           sequenceNumber,
-          commandType: 52,
+          executingCommandTypes: [52],
+          expectedCommandTypes: [54, 79, 81, 71, 53],
           onStatus
         });
+
+        if (inputSig.commandType === 79 || inputSig.commandType === 53) {
+          this.emit('coinsConfirmed', false);
+          throw new ExitFlowError();
+        }
+        if (inputSig.commandType === 81) {
+          this.emit('noWalletOnCard');
+          throw new ExitFlowError();
+        }
+        if (inputSig.commandType === 71) {
+          this.emit('cardError');
+          throw new ExitFlowError();
+        }
+
         sequenceNumber = connection.getNewSequenceNumber();
         await connection.sendCommand({
           commandType: 42,

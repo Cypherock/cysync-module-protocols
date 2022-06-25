@@ -42,7 +42,8 @@ export class DeviceUpdater extends CyFlow {
             });
             const updateConfirmed = await connection.waitForCommandOutput({
               sequenceNumber,
-              commandType: 77,
+              executingCommandTypes: [77],
+              expectedCommandTypes: [78],
               onStatus: status => {
                 if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
                   this.emit('updateConfirmed', false);

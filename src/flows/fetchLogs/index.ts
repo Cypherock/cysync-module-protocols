@@ -69,7 +69,8 @@ export class LogsFetcher extends CyFlow {
         sequenceNumber
       });
       const resp = await connection.waitForCommandOutput({
-        commandType: 38,
+        executingCommandTypes: [38],
+        expectedCommandTypes: [37, 38],
         sequenceNumber,
         onStatus: status => {
           if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
@@ -91,8 +92,16 @@ export class LogsFetcher extends CyFlow {
         }
       });
 
-      if (resp.commandType !== 38) {
-        throw new Error('Invalid commandType');
+      if (resp.commandType === 37) {
+        if (resp.data === '02') {
+          this.emit('loggingDisabled');
+          throw new ExitFlowError();
+        }
+
+        if (resp.data !== '01') {
+          this.emit('acceptedRequest', false);
+          throw new ExitFlowError();
+        }
       }
 
       rawData = resp.data;

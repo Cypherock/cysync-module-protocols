@@ -241,7 +241,8 @@ export class TransactionReceiver extends CyFlow {
 
     const addressVerified = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 59,
+      executingCommandTypes: [59],
+      expectedCommandTypes: [75, 76, 64, 63, 65, 71, 81],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
           this.emit('coinsConfirmed', false);
@@ -313,8 +314,21 @@ export class TransactionReceiver extends CyFlow {
       throw new ExitFlowError();
     }
 
-    if (addressVerified.commandType !== 64) {
-      throw new Error('Invalid commandType');
+    if (addressVerified.commandType === 63) {
+      this.emit('coinsConfirmed', false);
+      throw new ExitFlowError();
+    }
+    if (addressVerified.commandType === 65) {
+      this.emit('noXpub');
+      throw new ExitFlowError();
+    }
+    if (addressVerified.commandType === 81) {
+      this.emit('noWalletOnCard');
+      throw new ExitFlowError();
+    }
+    if (addressVerified.commandType === 71) {
+      this.emit('cardError');
+      throw new ExitFlowError();
     }
 
     if (addressVerified.data.startsWith('01')) {

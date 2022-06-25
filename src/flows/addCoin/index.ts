@@ -172,7 +172,8 @@ export class CoinAdder extends CyFlow {
 
     const data = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 45,
+      executingCommandTypes: [45],
+      expectedCommandTypes: [46, 49, 75, 76, 71, 81],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
           this.emit('coinsConfirmed', false);
@@ -247,8 +248,19 @@ export class CoinAdder extends CyFlow {
       throw new ExitFlowError();
     }
 
-    if (data.commandType !== 49) {
-      throw new Error('Invalid commandType');
+    if (data.commandType === 46) {
+      this.emit('coinsConfirmed', false);
+      throw new ExitFlowError();
+    }
+
+    if (data.commandType === 81) {
+      this.emit('noWalletOnCard');
+      throw new ExitFlowError();
+    }
+
+    if (data.commandType === 71) {
+      this.emit('cardError');
+      throw new ExitFlowError();
     }
 
     if (!isResync) {

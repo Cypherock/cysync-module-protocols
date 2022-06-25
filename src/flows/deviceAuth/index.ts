@@ -152,7 +152,8 @@ export class DeviceAuthenticator extends CyFlow {
 
     let data = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 83,
+      executingCommandTypes: [83],
+      expectedCommandTypes: [85, 83],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
           this.emit('confirmed', false);
@@ -178,8 +179,9 @@ export class DeviceAuthenticator extends CyFlow {
       }
     });
 
-    if (data.commandType !== 85) {
-      throw new Error('Invalid command type');
+    if (data.commandType === 83) {
+      this.emit('confirmed', false);
+      throw new ExitFlowError();
     }
 
     let serial;
@@ -240,13 +242,10 @@ export class DeviceAuthenticator extends CyFlow {
 
     const challengeHash = await connection.waitForCommandOutput({
       sequenceNumber,
-      commandType: 83,
+      executingCommandTypes: [83],
+      expectedCommandTypes: [86],
       onStatus: () => {}
     });
-
-    if (challengeHash.commandType !== 86) {
-      throw new Error('Invalid commandType');
-    }
 
     let challengeSignature: string;
     let challengePostfix1: string | undefined;
