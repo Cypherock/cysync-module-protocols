@@ -1,4 +1,8 @@
-import { createPort, DeviceConnection } from '@cypherock/communication';
+import {
+  createPort,
+  DeviceConnection,
+  DeviceErrorType
+} from '@cypherock/communication';
 import fs from 'fs';
 
 import { logger } from '../../utils';
@@ -48,14 +52,21 @@ export async function upgrade(
           isCompleted = true;
           connection.destroy();
           resolve();
-        } catch (error) {
-          retries += 1;
+        } catch (error: any) {
+          //dont retry if connection is closed
+          if (error.errorType === DeviceErrorType.CONNECTION_CLOSED) {
+            errorMsg = error as any;
+            break;
+          }
           isCompleted = false;
 
           if (retries > MAX_RETRIES) {
             logger.warn('Error while updating device, max retries exceeded.');
           } else {
-            logger.warn('Error while updating device, retrying...');
+            logger.warn(
+              `Error while updating device, retrying... ${retries} retries left`
+            );
+            retries += 1;
           }
 
           logger.warn(error);
