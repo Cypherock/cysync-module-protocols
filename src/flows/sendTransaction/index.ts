@@ -19,6 +19,7 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
   passphraseExists: boolean;
   xpub: string;
   zpub?: string;
+  customAccount?: string;
   coinType: string;
   outputList: Array<{ address: string; value: BigNumber }>;
   fee: number;
@@ -43,6 +44,7 @@ export class TransactionSender extends CyFlow {
     passphraseExists,
     xpub,
     zpub,
+    customAccount,
     coinType,
     outputList,
     fee,
@@ -131,7 +133,8 @@ export class TransactionSender extends CyFlow {
 
         const txnData = await wallet.generateUnsignedTransaction(
           outputList[0].address,
-          outputList[0].value
+          outputList[0].value,
+          customAccount
         );
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
         if (fee) {
