@@ -572,9 +572,16 @@ export class TransactionSender extends CyFlow {
     } else {
       const inputSignatures: string[] = [];
       for (const _ of txnInfo.inputs) {
+        sequenceNumber = connection.getNewSequenceNumber();
+        await connection.sendCommand({
+          commandType: 54,
+          data: '00',
+          sequenceNumber
+        });
+
         const inputSig = await connection.waitForCommandOutput({
           sequenceNumber,
-          executingCommandTypes: [52],
+          executingCommandTypes: [54],
           expectedCommandTypes: [54, 79, 81, 71, 53],
           onStatus
         });
@@ -592,12 +599,6 @@ export class TransactionSender extends CyFlow {
           throw new ExitFlowError();
         }
 
-        sequenceNumber = connection.getNewSequenceNumber();
-        await connection.sendCommand({
-          commandType: 42,
-          data: '01',
-          sequenceNumber
-        });
         inputSignatures.push(inputSig.data);
       }
 
