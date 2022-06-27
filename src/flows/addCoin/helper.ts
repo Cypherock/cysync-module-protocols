@@ -7,6 +7,7 @@ import {
   intToUintByte
 } from '@cypherock/communication';
 import { Coin } from '@cypherock/database';
+import { FlowError, FlowErrorType } from '../flowError';
 
 export const formatCoinsForDB = async (
   walletId: string,
@@ -21,9 +22,6 @@ export const formatCoinsForDB = async (
     sliceIndex += 224;
 
     const coinData = COINS[coinTypes[i]];
-    if (!coinData) {
-      throw new Error(`Cannot find coinType: ${coinTypes[i]}`);
-    }
     if (coinData instanceof BtcCoinData && coinData.hasSegwit) {
       z = xpubRaw.slice(sliceIndex, sliceIndex + 222);
       sliceIndex += 224;
@@ -61,7 +59,7 @@ export const createCoinIndexes = (selectedCoins: string[]) => {
     const coin = COINS[elem];
 
     if (!(coin instanceof CoinData)) {
-      throw new Error('Coin does not have an index: ' + elem);
+      throw new FlowError(FlowErrorType.ADD_COIN_UNKNOWN_ASSET, elem);
     }
 
     const coinIndex = coin.coinIndex;

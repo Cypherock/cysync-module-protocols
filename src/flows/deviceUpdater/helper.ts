@@ -1,8 +1,4 @@
-import {
-  createPort,
-  DeviceConnection,
-  DeviceErrorType
-} from '@cypherock/communication';
+import { createPort, DeviceConnection } from '@cypherock/communication';
 import fs from 'fs';
 
 import { logger } from '../../utils';
