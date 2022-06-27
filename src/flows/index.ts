@@ -40,7 +40,7 @@ export abstract class CyFlow extends EventEmitter {
           throw new Error('Connection was not open');
         }
 
-        await connection.sendData(41, '00', 2);
+        await connection.sendData(41, '00');
         connection
           .receiveData([42], 2000)
           .then(deviceResponse => {

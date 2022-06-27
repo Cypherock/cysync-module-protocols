@@ -53,8 +53,7 @@ export async function upgrade(
           connection.destroy();
           resolve();
         } catch (error: any) {
-          //dont retry if connection is closed
-          if (error.errorType === DeviceErrorType.CONNECTION_CLOSED) {
+          if (error?.doRetry && !error.doRetry) {
             errorMsg = error as any;
             break;
           }
