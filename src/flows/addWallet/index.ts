@@ -65,7 +65,6 @@ export class WalletAdder extends CyFlow {
     let requestAcceptedState = 0;
 
     let data = await connection.waitForCommandOutput({
-      executingCommandTypes: [43],
       expectedCommandTypes: [44, 76],
       sequenceNumber,
       onStatus: status => {

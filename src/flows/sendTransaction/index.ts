@@ -47,6 +47,8 @@ enum SEND_TRANSACTION_STATUS {
   SEND_TXN_VERIFY_COIN = 1,
   SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN,
   SEND_TXN_UNSIGNED_TXN_RECEIVED,
+  SEND_TXN_VERIFY_UTXO_FETCH_RAW_TXN,
+  SEND_TXN_VERIFY_UTXO,
   SEND_TXN_VERIFY_RECEIPT_ADDRESS,
   SEND_TXN_VERIFY_RECEIPT_AMOUNT,
   SEND_TXN_CHECK_RECEIPT_FEES_LIMIT,
@@ -61,9 +63,7 @@ enum SEND_TRANSACTION_STATUS {
   SEND_TXN_READ_DEVICE_SHARE,
   SEND_TXN_SIGN_TXN,
   SEND_TXN_WAITING_SCREEN,
-  SEND_TXN_FINAL_SCREEN,
-  SEND_TXN_VERIFY_UTXO_FETCH_RAW_TXN,
-  SEND_TXN_VERIFY_UTXO
+  SEND_TXN_FINAL_SCREEN
 }
 
 enum SEND_TRANSACTION_STATUS_ETH {
@@ -435,7 +435,6 @@ export class TransactionSender extends CyFlow {
 
     const receivedData = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [50],
       expectedCommandTypes: [75, 76, 51],
       onStatus
     });
@@ -471,6 +470,7 @@ export class TransactionSender extends CyFlow {
       this.emit('coinsConfirmed', false);
       throw new ExitFlowError();
     }
+    this.emit('coinsConfirmed', true);
 
     if (unsignedTransaction === '') {
       logger.info('Insufficient funds.');
@@ -489,9 +489,8 @@ export class TransactionSender extends CyFlow {
     if (!(coin instanceof EthCoinData)) {
       const utxoRequest = await connection.waitForCommandOutput({
         sequenceNumber,
-        executingCommandTypes: [52],
         expectedCommandTypes: [51],
-        onStatus: () => {}
+        onStatus
       });
 
       if (utxoRequest.data !== '02') {
@@ -507,7 +506,6 @@ export class TransactionSender extends CyFlow {
         });
         const utxoResponse = await connection.waitForCommandOutput({
           sequenceNumber,
-          executingCommandTypes: [52],
           expectedCommandTypes: [51],
           onStatus: () => {}
         });
@@ -525,7 +523,6 @@ export class TransactionSender extends CyFlow {
 
       const signedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        executingCommandTypes: [52],
         expectedCommandTypes: [54, 79, 81, 71, 53],
         onStatus
       });
@@ -581,7 +578,6 @@ export class TransactionSender extends CyFlow {
 
         const inputSig = await connection.waitForCommandOutput({
           sequenceNumber,
-          executingCommandTypes: [54],
           expectedCommandTypes: [54, 79, 81, 71, 53],
           onStatus
         });

@@ -69,7 +69,6 @@ export class LogsFetcher extends CyFlow {
         sequenceNumber
       });
       const resp = await connection.waitForCommandOutput({
-        executingCommandTypes: [38],
         expectedCommandTypes: [37, 38],
         sequenceNumber,
         onStatus: status => {

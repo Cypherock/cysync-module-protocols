@@ -152,7 +152,6 @@ export class DeviceAuthenticator extends CyFlow {
 
     let data = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [83],
       expectedCommandTypes: [85, 83],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
@@ -242,7 +241,6 @@ export class DeviceAuthenticator extends CyFlow {
 
     const challengeHash = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [83],
       expectedCommandTypes: [86],
       onStatus: () => {}
     });

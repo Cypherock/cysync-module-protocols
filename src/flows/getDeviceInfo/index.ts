@@ -114,7 +114,6 @@ export class GetDeviceInfo extends CyFlow {
     });
     const sdkVersionData = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [87],
       expectedCommandTypes: [87],
       onStatus: () => {}
     });
@@ -147,7 +146,6 @@ export class GetDeviceInfo extends CyFlow {
     });
     const data = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [87],
       expectedCommandTypes: [87],
       onStatus: () => {}
     });

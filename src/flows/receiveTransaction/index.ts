@@ -241,7 +241,6 @@ export class TransactionReceiver extends CyFlow {
 
     const addressVerified = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [59],
       expectedCommandTypes: [75, 76, 64, 63, 65, 71, 81],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {

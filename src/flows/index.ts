@@ -94,7 +94,6 @@ export abstract class CyFlow extends EventEmitter {
     connection: DeviceConnection,
     options?: { dontRemoveListeners?: boolean; dontAbort?: boolean }
   ) {
-    console.log('In on End');
     try {
       try {
         if (!(options && options.dontAbort)) {

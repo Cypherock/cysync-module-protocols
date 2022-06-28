@@ -172,7 +172,6 @@ export class CoinAdder extends CyFlow {
 
     const data = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [45],
       expectedCommandTypes: [46, 49, 75, 76, 71, 81],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {

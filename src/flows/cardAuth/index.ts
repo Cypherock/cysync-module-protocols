@@ -136,7 +136,6 @@ export class CardAuthenticator extends CyFlow {
 
     const cardData = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [70],
       expectedCommandTypes: [70, 13],
       onStatus: status => {
         if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
@@ -199,7 +198,6 @@ export class CardAuthenticator extends CyFlow {
 
     const challengeHash = await connection.waitForCommandOutput({
       sequenceNumber,
-      executingCommandTypes: [16],
       expectedCommandTypes: [70, 17],
       onStatus: () => {}
     });
@@ -243,7 +241,6 @@ export class CardAuthenticator extends CyFlow {
     if (isTestApp) {
       const pairing = await connection.waitForCommandOutput({
         sequenceNumber,
-        executingCommandTypes: [42],
         expectedCommandTypes: [70],
         onStatus: () => {}
       });
