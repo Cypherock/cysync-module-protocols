@@ -1,4 +1,4 @@
-import { PacketVersionMap, CmdState } from '@cypherock/communication';
+import { PacketVersionMap } from '@cypherock/communication';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -154,17 +154,8 @@ export class DeviceAuthenticator extends CyFlow {
       sequenceNumber,
       expectedCommandTypes: [85, 83],
       onStatus: status => {
-        if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-          this.emit('confirmed', false);
-          throw new ExitFlowError();
-        }
-
-        if (status.cmdState !== CmdState.CMD_STATUS_EXECUTING) {
-          return;
-        }
-
         if (
-          status.cmdStatus >=
+          status.flowStatus >=
             VERIFY_DEVICE_FLOW.VERIFY_DEVICE_ESTABLISH_CONNECTION_BACKEND &&
           requestAcceptedState === 0
         ) {

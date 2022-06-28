@@ -1,4 +1,4 @@
-import { PacketVersionMap, CmdState } from '@cypherock/communication';
+import { PacketVersionMap } from '@cypherock/communication';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 import { sleep, upgrade } from './helper';
@@ -43,12 +43,7 @@ export class DeviceUpdater extends CyFlow {
             const updateConfirmed = await connection.waitForCommandOutput({
               sequenceNumber,
               expectedCommandTypes: [78],
-              onStatus: status => {
-                if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-                  this.emit('updateConfirmed', false);
-                  throw new ExitFlowError();
-                }
-              }
+              onStatus: () => {}
             });
             isConfirmed = updateConfirmed.data.startsWith('01');
           } else {

@@ -1,4 +1,4 @@
-import { PacketVersionMap, CmdState } from '@cypherock/communication';
+import { PacketVersionMap } from '@cypherock/communication';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -68,13 +68,8 @@ export class WalletAdder extends CyFlow {
       expectedCommandTypes: [44, 76],
       sequenceNumber,
       onStatus: status => {
-        if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-          this.emit('acceptedRequest', false);
-          throw new ExitFlowError();
-        }
-
         if (
-          status.cmdStatus >= WALLET_ADDER_TASKS.WALLET_ADDER_SELECT_WALLET &&
+          status.flowStatus >= WALLET_ADDER_TASKS.WALLET_ADDER_SELECT_WALLET &&
           requestAcceptedState === 0
         ) {
           requestAcceptedState = 1;

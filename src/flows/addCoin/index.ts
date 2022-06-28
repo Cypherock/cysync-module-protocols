@@ -1,4 +1,4 @@
-import { PacketVersionMap, CmdState } from '@cypherock/communication';
+import { PacketVersionMap } from '@cypherock/communication';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -174,13 +174,8 @@ export class CoinAdder extends CyFlow {
       sequenceNumber,
       expectedCommandTypes: [46, 49, 75, 76, 71, 81],
       onStatus: status => {
-        if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-          this.emit('coinsConfirmed', false);
-          throw new ExitFlowError();
-        }
-
         if (
-          status.cmdStatus >= ADD_COINS_TASKS.ADD_COINS_VERIFY &&
+          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_VERIFY &&
           requestAcceptedState === 0
         ) {
           requestAcceptedState = 1;
@@ -188,7 +183,7 @@ export class CoinAdder extends CyFlow {
 
         if (
           passphraseExists &&
-          status.cmdStatus >= ADD_COINS_TASKS.ADD_COINS_CONFIRM_PASSPHRASE &&
+          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_CONFIRM_PASSPHRASE &&
           passphraseEnteredState === 0
         ) {
           passphraseEnteredState = 1;
@@ -196,14 +191,14 @@ export class CoinAdder extends CyFlow {
 
         if (
           pinExists &&
-          status.cmdStatus >= ADD_COINS_TASKS.ADD_COINS_ENTER_PIN &&
+          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_ENTER_PIN &&
           pinEnteredState === 0
         ) {
           pinEnteredState = 1;
         }
 
         if (
-          status.cmdStatus >= ADD_COINS_TASKS.ADD_COINS_TAP_CARD_SEND_CMD &&
+          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_TAP_CARD_SEND_CMD &&
           cardTapState === 0
         ) {
           cardTapState = 1;

@@ -2,7 +2,6 @@ import {
   COINS,
   EthCoinData,
   PacketVersionMap,
-  CmdState,
   CoinGroup
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
@@ -243,13 +242,8 @@ export class TransactionReceiver extends CyFlow {
       sequenceNumber,
       expectedCommandTypes: [75, 76, 64, 63, 65, 71, 81],
       onStatus: status => {
-        if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-          this.emit('coinsConfirmed', false);
-          throw new ExitFlowError();
-        }
-
         if (
-          status.cmdStatus >= requestAcceptedCmdStatus &&
+          status.flowStatus >= requestAcceptedCmdStatus &&
           requestAcceptedState === 0
         ) {
           requestAcceptedState = 1;
@@ -257,7 +251,7 @@ export class TransactionReceiver extends CyFlow {
 
         if (
           passphraseExists &&
-          status.cmdStatus >= passphraseEnteredCmdStatus &&
+          status.flowStatus >= passphraseEnteredCmdStatus &&
           passphraseEnteredState === 0
         ) {
           passphraseEnteredState = 1;
@@ -265,13 +259,13 @@ export class TransactionReceiver extends CyFlow {
 
         if (
           pinExists &&
-          status.cmdStatus >= pinEnteredCmdStatus &&
+          status.flowStatus >= pinEnteredCmdStatus &&
           pinEnteredState === 0
         ) {
           pinEnteredState = 1;
         }
 
-        if (status.cmdStatus >= cardTapCmdStatus && cardTapState === 0) {
+        if (status.flowStatus >= cardTapCmdStatus && cardTapState === 0) {
           cardTapState = 1;
         }
 

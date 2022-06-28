@@ -1,8 +1,4 @@
-import {
-  hexToAscii,
-  PacketVersionMap,
-  CmdState
-} from '@cypherock/communication';
+import { hexToAscii, PacketVersionMap } from '@cypherock/communication';
 import fs from 'fs';
 
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
@@ -72,13 +68,8 @@ export class LogsFetcher extends CyFlow {
         expectedCommandTypes: [37, 38],
         sequenceNumber,
         onStatus: status => {
-          if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-            this.emit('acceptedRequest', false);
-            throw new ExitFlowError();
-          }
-
           if (
-            status.cmdStatus >= LOGS_FETCHER_STATUS.START_COMMAND &&
+            status.flowStatus >= LOGS_FETCHER_STATUS.START_COMMAND &&
             requestAcceptedState === 0
           ) {
             requestAcceptedState = 1;

@@ -1,4 +1,4 @@
-import { PacketVersionMap, CmdState } from '@cypherock/communication';
+import { PacketVersionMap } from '@cypherock/communication';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -138,13 +138,8 @@ export class CardAuthenticator extends CyFlow {
       sequenceNumber,
       expectedCommandTypes: [70, 13],
       onStatus: status => {
-        if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-          this.emit('acceptedRequest', false);
-          throw new ExitFlowError();
-        }
-
         if (
-          status.cmdStatus >=
+          status.flowStatus >=
             VERIFY_CARD_FLOW.VERIFY_CARD_ESTABLISH_CONNECTION_BACKEND &&
           requestAcceptedState === 0
         ) {

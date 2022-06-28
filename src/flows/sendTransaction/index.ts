@@ -4,7 +4,6 @@ import {
   EthCoinData,
   PacketVersionMap,
   CoinGroup,
-  CmdState,
   StatusData
 } from '@cypherock/communication';
 import { AddressDB, TransactionDB } from '@cypherock/database';
@@ -364,24 +363,15 @@ export class TransactionSender extends CyFlow {
     }
 
     const onStatus = (status: StatusData) => {
-      if (status.cmdState === CmdState.CMD_STATUS_REJECTED) {
-        if (requestAcceptedState === 2) {
-          this.emit('verified', false);
-        } else {
-          this.emit('coinsConfirmed', false);
-        }
-        throw new ExitFlowError();
-      }
-
       if (
-        status.cmdStatus >= requestAcceptedCmdStatus &&
+        status.flowStatus >= requestAcceptedCmdStatus &&
         requestAcceptedState === 0
       ) {
         requestAcceptedState = 1;
       }
 
       if (
-        status.cmdStatus >= recipientVerifiedCmdStatus &&
+        status.flowStatus >= recipientVerifiedCmdStatus &&
         recipientVerifiedState === 0
       ) {
         recipientVerifiedState = 1;
@@ -389,7 +379,7 @@ export class TransactionSender extends CyFlow {
 
       if (
         passphraseExists &&
-        status.cmdStatus >= passphraseEnteredCmdStatus &&
+        status.flowStatus >= passphraseEnteredCmdStatus &&
         passphraseEnteredState === 0
       ) {
         passphraseEnteredState = 1;
@@ -397,13 +387,13 @@ export class TransactionSender extends CyFlow {
 
       if (
         pinExists &&
-        status.cmdStatus >= pinEnteredCmdStatus &&
+        status.flowStatus >= pinEnteredCmdStatus &&
         pinEnteredState === 0
       ) {
         pinEnteredState = 1;
       }
 
-      if (status.cmdStatus >= cardTapCmdStatus && cardTapState === 0) {
+      if (status.flowStatus >= cardTapCmdStatus && cardTapState === 0) {
         cardTapState = 1;
       }
 
