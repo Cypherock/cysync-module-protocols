@@ -20,6 +20,7 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
   xpub: string;
   zpub?: string;
   customAccount?: string;
+  newAccountId?: string;
   coinType: string;
   outputList: Array<{ address: string; value: BigNumber }>;
   fee: number;
@@ -45,6 +46,7 @@ export class TransactionSender extends CyFlow {
     xpub,
     zpub,
     customAccount,
+    newAccountId,
     coinType,
     outputList,
     fee,
@@ -130,12 +132,16 @@ export class TransactionSender extends CyFlow {
         wallet = new NearWallet(xpub, coin);
         metaData = await wallet.generateMetaData(fee);
         const { network } = coin;
-
-        const txnData = await wallet.generateUnsignedTransaction(
-          outputList[0].address,
-          outputList[0].value,
-          customAccount
-        );
+        const txnData = newAccountId
+          ? await wallet.generateCreateAccountTransaction(
+              newAccountId,
+              customAccount
+            )
+          : await wallet.generateUnsignedTransaction(
+              outputList[0].address,
+              outputList[0].value,
+              customAccount
+            );
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
         if (fee) {
           feeRate = fee;
@@ -515,17 +521,12 @@ export class TransactionSender extends CyFlow {
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
           .toString(10);
-        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
-
-        if (!token) {
-          throw new Error('Invalid token or coinType');
-        }
 
         if (isSendAll) {
           this.emit(
             'sendMaxAmount',
             calcData.amount
-              .dividedBy(new BigNumber(token.multiplier))
+              .dividedBy(new BigNumber(coin.multiplier))
               .toString(10)
           );
         }

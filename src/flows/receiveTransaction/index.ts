@@ -13,6 +13,7 @@ export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
   zpub?: string;
   contractAbbr?: string;
   passphraseExists?: boolean;
+  customAccount?: string;
 }
 
 export class TransactionReceiver extends CyFlow {
@@ -28,7 +29,8 @@ export class TransactionReceiver extends CyFlow {
     xpub,
     zpub,
     contractAbbr = 'ETH',
-    passphraseExists = false
+    passphraseExists = false,
+    customAccount
   }: TransactionReceiverRunOptions) {
     let flowInterupted = false;
     try {
@@ -55,6 +57,16 @@ export class TransactionReceiver extends CyFlow {
         //To make the first x in lowercase
         receiveAddress = '0x' + receiveAddress.slice(2);
         receiveAddressPath = await wallet.getDerivationPath(contractAbbr);
+      } else if (coin instanceof NearCoinData && customAccount) {
+        wallet = newWallet({
+          coinType,
+          xpub,
+          walletId,
+          zpub,
+          addressDB
+        });
+        receiveAddress = customAccount;
+        receiveAddressPath = await wallet.getDerivationPathForCustomAccount();
       } else {
         wallet = newWallet({
           coinType,
@@ -160,6 +172,8 @@ export class TransactionReceiver extends CyFlow {
             address = `0x${addressHex.toLowerCase()}`;
           } else if (coin instanceof NearCoinData) {
             address = addressHex.toLowerCase();
+          } else if (coin instanceof NearCoinData && customAccount) {
+            address = customAccount;
           } else {
             address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
           }
