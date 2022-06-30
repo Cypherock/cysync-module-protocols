@@ -1,5 +1,6 @@
 import {
   ALLCOINS,
+  CoinData,
   COINS,
   EthCoinData,
   NearCoinData
@@ -150,7 +151,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.near.transaction
             .getFees({ network })
             .request();
-          feeRate = res.data;
+          feeRate = res.data / 10 ** coin.decimal;
         }
 
         totalFees = feeRate;
