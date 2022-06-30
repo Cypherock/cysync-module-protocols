@@ -1,6 +1,5 @@
 import {
   ALLCOINS,
-  CoinData,
   COINS,
   EthCoinData,
   NearCoinData
