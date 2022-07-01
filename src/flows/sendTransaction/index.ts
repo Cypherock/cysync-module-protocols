@@ -1,9 +1,9 @@
 import {
   ALLCOINS,
+  CoinGroup,
   COINS,
   EthCoinData,
   PacketVersionMap,
-  CoinGroup,
   StatusData
 } from '@cypherock/communication';
 import { AddressDB, TransactionDB } from '@cypherock/database';

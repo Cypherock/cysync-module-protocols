@@ -1,4 +1,5 @@
 import { PacketVersionMap } from '@cypherock/communication';
+
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -54,7 +55,7 @@ export class WalletAdder extends CyFlow {
   }
 
   private async runOperation({ connection }: WalletAdderRunOptions) {
-    let sequenceNumber = connection.getNewSequenceNumber();
+    const sequenceNumber = connection.getNewSequenceNumber();
 
     await connection.sendCommand({
       commandType: 43,
@@ -64,7 +65,7 @@ export class WalletAdder extends CyFlow {
 
     let requestAcceptedState = 0;
 
-    let data = await connection.waitForCommandOutput({
+    const data = await connection.waitForCommandOutput({
       expectedCommandTypes: [44, 76],
       sequenceNumber,
       onStatus: status => {

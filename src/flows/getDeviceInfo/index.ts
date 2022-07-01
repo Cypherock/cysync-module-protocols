@@ -1,4 +1,4 @@
-import { PacketVersionMap, PacketVersion } from '@cypherock/communication';
+import { PacketVersion, PacketVersionMap } from '@cypherock/communication';
 import { DeviceDB } from '@cypherock/database';
 
 import {

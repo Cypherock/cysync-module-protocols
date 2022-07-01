@@ -1,8 +1,8 @@
 import {
+  CoinGroup,
   COINS,
   EthCoinData,
-  PacketVersionMap,
-  CoinGroup
+  PacketVersionMap
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
@@ -201,7 +201,7 @@ export class TransactionReceiver extends CyFlow {
       walletId
     });
 
-    let sequenceNumber = connection.getNewSequenceNumber();
+    const sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
       commandType: 59,
       data: walletId + receiveAddressPath,

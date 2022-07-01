@@ -1,4 +1,5 @@
 import { PacketVersionMap } from '@cypherock/communication';
+
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -150,7 +151,7 @@ export class DeviceAuthenticator extends CyFlow {
 
     let requestAcceptedState = 0;
 
-    let data = await connection.waitForCommandOutput({
+    const data = await connection.waitForCommandOutput({
       sequenceNumber,
       expectedCommandTypes: [85, 83],
       onStatus: status => {

@@ -1,4 +1,5 @@
 import { PacketVersionMap } from '@cypherock/communication';
+
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -158,7 +159,7 @@ export class CoinAdder extends CyFlow {
     passphraseExists
   }: CoinAdderRunOptions) {
     const resyncIndex = isResync ? '01' : '00';
-    let sequenceNumber = connection.getNewSequenceNumber();
+    const sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
       commandType: 45,
       data: walletId + resyncIndex + createCoinIndexes(selectedCoins),
