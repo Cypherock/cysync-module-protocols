@@ -69,7 +69,9 @@ export class DeviceUpdater extends CyFlow {
         this.emit('updateConfirmed', true);
       }
 
-      await upgrade(connection, firmwarePath);
+      await upgrade(connection, firmwarePath, progress =>
+        this.emit('progress', progress)
+      );
       this.emit('completed');
     } catch (e) {
       if (!(e instanceof ExitFlowError)) {
