@@ -1,3 +1,5 @@
+import { PacketVersionMap } from '@cypherock/communication';
+
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 import { sleep, upgrade } from './helper';
@@ -29,16 +31,32 @@ export class DeviceUpdater extends CyFlow {
         const ready = await this.deviceReady(connection);
 
         if (ready) {
-          await connection.sendData(77, firmwareVersion);
-          const updateConfirmed = await connection.receiveData([78]);
+          const packetVersion = connection.getPacketVersion();
+          let isConfirmed = false;
 
-          if (updateConfirmed.data === '01') {
-            this.emit('updateConfirmed', true);
-          } else if (updateConfirmed.data === '00') {
-            this.emit('updateConfirmed', false);
-            throw new ExitFlowError();
+          if (packetVersion === PacketVersionMap.v3) {
+            const sequenceNumber = connection.getNewSequenceNumber();
+            await connection.sendCommand({
+              commandType: 77,
+              data: firmwareVersion,
+              sequenceNumber
+            });
+            const updateConfirmed = await connection.waitForCommandOutput({
+              sequenceNumber,
+              expectedCommandTypes: [78],
+              onStatus: () => {}
+            });
+            isConfirmed = updateConfirmed.data.startsWith('01');
           } else {
-            this.emit('error');
+            await connection.sendData(77, firmwareVersion);
+            const updateConfirmed = await connection.receiveData([78]);
+            isConfirmed = updateConfirmed.data.startsWith('01');
+          }
+
+          if (isConfirmed) {
+            this.emit('updateConfirmed', true);
+          } else {
+            this.emit('updateConfirmed', false);
             throw new ExitFlowError();
           }
 
@@ -51,7 +69,9 @@ export class DeviceUpdater extends CyFlow {
         this.emit('updateConfirmed', true);
       }
 
-      await upgrade(connection, firmwarePath);
+      await upgrade(connection, firmwarePath, progress =>
+        this.emit('progress', progress)
+      );
       this.emit('completed');
     } catch (e) {
       if (!(e instanceof ExitFlowError)) {
