@@ -66,7 +66,9 @@ export class TransactionReceiver extends CyFlow {
           addressDB
         });
         receiveAddress = customAccount;
-        receiveAddressPath = await wallet.getDerivationPathForCustomAccount();
+        receiveAddressPath = await wallet.getDerivationPathForCustomAccount(
+          customAccount
+        );
       } else {
         wallet = newWallet({
           coinType,
@@ -116,6 +118,9 @@ export class TransactionReceiver extends CyFlow {
 
         if (data.commandType === 65 && data.data === '01') {
           this.emit('coinsConfirmed', true);
+        } else if (data.commandType === 65 && data.data === '02') {
+          this.emit('coinsConfirmed', true);
+          this.emit('customAccountExists', true);
         } else if (data.commandType === 65 && data.data === '00') {
           this.emit('noXpub');
           throw new ExitFlowError();
@@ -170,10 +175,10 @@ export class TransactionReceiver extends CyFlow {
 
           if (coin instanceof EthCoinData) {
             address = `0x${addressHex.toLowerCase()}`;
-          } else if (coin instanceof NearCoinData) {
-            address = addressHex.toLowerCase();
           } else if (coin instanceof NearCoinData && customAccount) {
             address = customAccount;
+          } else if (coin instanceof NearCoinData) {
+            address = addressHex.toLowerCase();
           } else {
             address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
           }
