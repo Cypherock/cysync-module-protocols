@@ -1,7 +1,7 @@
 export enum FlowErrorType {
   UNKNOWN_FLOW_ERROR = 'HD_OPS_5500',
 
-  ADD_COIN_UNKNOWN_ASSET = ''
+  ADD_COIN_UNKNOWN_ASSET = 'HD_OPS_1501'
 }
 
 export class FlowError extends Error {
