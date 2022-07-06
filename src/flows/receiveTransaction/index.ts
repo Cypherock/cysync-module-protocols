@@ -2,6 +2,7 @@ import {
   CoinGroup,
   COINS,
   EthCoinData,
+  NearCoinData,
   PacketVersionMap
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
@@ -19,6 +20,7 @@ export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
   contractAbbr?: string;
   passphraseExists?: boolean;
   pinExists?: boolean;
+  customAccount?: boolean;
 }
 
 interface RunParams extends TransactionReceiverRunOptions {
@@ -330,6 +332,8 @@ export class TransactionReceiver extends CyFlow {
 
       if (coin instanceof EthCoinData) {
         address = `0x${addressHex.toLowerCase()}`;
+      } else if (coin instanceof NearCoinData) {
+        address = addressHex;
       } else {
         address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
       }
@@ -379,6 +383,18 @@ export class TransactionReceiver extends CyFlow {
         //To make the first x in lowercase
         receiveAddress = '0x' + receiveAddress.slice(2);
         receiveAddressPath = await wallet.getDerivationPath(contractAbbr);
+      } else if (coin instanceof NearCoinData && customAccount) {
+        wallet = newWallet({
+          coinType,
+          xpub,
+          walletId,
+          zpub,
+          addressDB
+        });
+        receiveAddress = customAccount;
+        receiveAddressPath = await wallet.getDerivationPathForCustomAccount(
+          customAccount
+        );
       } else {
         wallet = newWallet({
           coinType,

@@ -16,13 +16,14 @@ import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
-  transactionDB: TransactionDB;
   addressDB: AddressDB;
   walletId: string;
   pinExists: boolean;
   passphraseExists: boolean;
   xpub: string;
   zpub?: string;
+  customAccount?: string;
+  newAccountId?: string;
   coinType: string;
   outputList: Array<{ address: string; value: BigNumber }>;
   fee: number;
@@ -669,7 +670,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = Math.round(res.data / 1000000000);
+          feeRate = res.data.FastGasPrice;
         }
 
         metaData = await wallet.generateMetaData(
@@ -714,14 +715,7 @@ export class TransactionSender extends CyFlow {
 
         totalFees = fee;
       } else {
-        wallet = new BitcoinWallet({
-          xpub,
-          coinType,
-          walletId,
-          zpub,
-          addressDb: addressDB,
-          transactionDb: transactionDB
-        });
+        wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 
         if (fee) {
           feeRate = fee;
@@ -823,8 +817,7 @@ export class TransactionSender extends CyFlow {
       gasLimit: 21000,
       contractAddress: undefined,
       contractAbbr: undefined
-    },
-    transactionDB?: TransactionDB
+    }
   ) {
     try {
       this.cancelled = false;
@@ -850,7 +843,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = Math.round(res.data / 1000000000);
+          feeRate = res.data.FastGasPrice;
         }
 
         const calcData = await wallet.approximateTxnFee(
@@ -915,13 +908,7 @@ export class TransactionSender extends CyFlow {
           );
         }
       } else {
-        const wallet = new BitcoinWallet({
-          xpub,
-          coinType,
-          walletId,
-          zpub,
-          transactionDb: transactionDB
-        });
+        const wallet = new BitcoinWallet(xpub, coinType, walletId, zpub);
 
         if (fee) {
           feeRate = fee;
