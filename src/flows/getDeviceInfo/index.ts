@@ -2,9 +2,9 @@ import { PacketVersion, PacketVersionMap } from '@cypherock/communication';
 import { DeviceDB } from '@cypherock/database';
 
 import {
-  ALL_SUPPORTED_SDK_VERSIONS,
   LATEST_SUPPORTED_SDK_VERSION,
-  OLDEST_SUPPORTED_SDK_VERSION
+  OLDEST_SUPPORTED_SDK_VERSION,
+  checkSDKSupport
 } from '../../config';
 import logger from '../../utils/logger';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
@@ -46,7 +46,7 @@ export class GetDeviceInfo extends CyFlow {
 
     this.emit('sdkVersion', sdkVersion);
 
-    if (!ALL_SUPPORTED_SDK_VERSIONS.includes(sdkVersion)) {
+    if (!checkSDKSupport(sdkVersion)) {
       /* `sdkNotSupported` will be emitted with the following parameters:
        * app: If the cysync needs to be updated
        * device: If the device needs to be updated
@@ -108,21 +108,21 @@ export class GetDeviceInfo extends CyFlow {
     let sdkVersion = '0.0.0';
     let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
-      commandType: 87,
+      commandType: 88,
       data: '00',
       sequenceNumber
     });
     const sdkVersionData = await connection.waitForCommandOutput({
       sequenceNumber,
-      expectedCommandTypes: [87],
+      expectedCommandTypes: [88],
       onStatus: () => {}
     });
-
+    console.log('unformatted sdk data', sdkVersionData.data);
     sdkVersion = formatSDKVersion(sdkVersionData.data);
 
     this.emit('sdkVersion', sdkVersion);
 
-    if (!ALL_SUPPORTED_SDK_VERSIONS.includes(sdkVersion)) {
+    if (!checkSDKSupport(sdkVersion)) {
       /* `sdkNotSupported` will be emitted with the following parameters:
        * app: If the cysync needs to be updated
        * device: If the device needs to be updated
