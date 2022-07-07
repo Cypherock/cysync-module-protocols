@@ -1,4 +1,5 @@
 import { PacketVersionMap } from '@cypherock/communication';
+import { commandHandler76 } from '../../handlers';
 
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
@@ -60,14 +61,7 @@ export class CoinAdder extends CyFlow {
       throw new ExitFlowError();
     }
     if (data.commandType === 76) {
-      if (data.data.startsWith('02')) {
-        // Wallet does not exist
-        this.emit('noWalletFound', false);
-      } else {
-        // Wallet is in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(data, this);
     }
     const coinConfirmed = data.data;
     if (parseInt(coinConfirmed, 10)) {
@@ -233,14 +227,7 @@ export class CoinAdder extends CyFlow {
     }
 
     if (data.commandType === 76) {
-      if (data.data.startsWith('02')) {
-        // Wallet does not exist
-        this.emit('noWalletFound', false);
-      } else {
-        // Wallet is in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(data, this);
     }
 
     if (data.commandType === 46) {
@@ -288,7 +275,7 @@ export class CoinAdder extends CyFlow {
         const packetVersion = connection.getPacketVersion();
         if (packetVersion === PacketVersionMap.v3) {
           await this.runOperation(params);
-        } else {
+        } else if (packetVersion === PacketVersionMap.v2) {
           await this.runLegacy(params);
         }
       } else {
