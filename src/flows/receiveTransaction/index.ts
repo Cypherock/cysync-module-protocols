@@ -20,7 +20,7 @@ export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
   contractAbbr?: string;
   passphraseExists?: boolean;
   pinExists?: boolean;
-  customAccount?: boolean;
+  customAccount?: string;
 }
 
 interface RunParams extends TransactionReceiverRunOptions {
@@ -40,6 +40,7 @@ enum RECEIVE_TRANSACTION_STATUS {
   RECV_TXN_DERIVE_ADD_SCREEN,
   RECV_TXN_DERIVE_ADD,
   RECV_TXN_DISPLAY_ADDR,
+  RECV_TXN_DISPLAY_ADDR_NEAR,
   RECV_TXN_WAITING_SCREEN,
   RECV_TXN_FINAL_SCREEN
 }
@@ -166,6 +167,8 @@ export class TransactionReceiver extends CyFlow {
 
       if (coin instanceof EthCoinData) {
         address = `0x${addressHex.toLowerCase()}`;
+      } else if (coin instanceof NearCoinData) {
+        address = addressHex;
       } else {
         address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
       }
@@ -355,7 +358,8 @@ export class TransactionReceiver extends CyFlow {
       coinType,
       xpub,
       zpub,
-      contractAbbr = 'ETH'
+      contractAbbr = 'ETH',
+      customAccount
     } = params;
 
     let flowInterupted = false;
