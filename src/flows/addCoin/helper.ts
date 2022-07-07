@@ -7,6 +7,7 @@ import {
   intToUintByte
 } from '@cypherock/communication';
 import { Coin } from '@cypherock/database';
+
 import { FlowError, FlowErrorType } from '../flowError';
 
 export const formatCoinsForDB = async (

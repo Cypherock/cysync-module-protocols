@@ -1,6 +1,6 @@
 import { PacketVersionMap } from '@cypherock/communication';
-import { commandHandler76 } from '../../handlers';
 
+import { commandHandler76 } from '../../handlers';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
