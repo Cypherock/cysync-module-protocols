@@ -59,7 +59,7 @@ export class GetDeviceInfo extends CyFlow {
     connection,
     deviceDB
   }: GetDeviceInfoRunOptions & { packetVersion: PacketVersion }) {
-    let sequenceNumber = connection.getNewSequenceNumber();
+    const sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
       commandType: 87,
       data: '00',
