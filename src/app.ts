@@ -10,4 +10,3 @@ export * from './flows/fetchLogs';
 export * from './flows/cancelFlow';
 
 export { logLevel } from './utils';
-export * from './config';
