@@ -1,5 +1,6 @@
 import { PacketVersionMap } from '@cypherock/communication';
 
+import { commandHandler76 } from '../../handlers';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -31,14 +32,7 @@ export class WalletAdder extends CyFlow {
 
     const data = await connection.receiveData([44, 76], 30000);
     if (data.commandType === 76) {
-      if (data.data.startsWith('00')) {
-        // No Wallet exist
-        this.emit('noWalletFound', false);
-      } else {
-        // All exisiting wallets are in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(data, this);
     }
 
     const rawWalletDetails = data.data;
@@ -84,14 +78,7 @@ export class WalletAdder extends CyFlow {
     });
 
     if (data.commandType === 76) {
-      if (data.data.startsWith('00')) {
-        // No Wallet exist
-        this.emit('noWalletFound', false);
-      } else {
-        // All exisiting wallets are in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(data, this);
     }
 
     const rawWalletDetails = data.data;

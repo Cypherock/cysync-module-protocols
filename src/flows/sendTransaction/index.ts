@@ -11,6 +11,7 @@ import Server from '@cypherock/server-wrapper';
 import { BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
 
+import { commandHandler76 } from '../../handlers';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -127,15 +128,7 @@ export class TransactionSender extends CyFlow {
       throw new ExitFlowError();
     }
     if (receivedData.commandType === 76) {
-      logger.info('No such wallet exists on the device');
-      if (receivedData.data.startsWith('02')) {
-        // Wallet does not exist
-        this.emit('noWalletFound', false);
-      } else {
-        // Wallet is in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(receivedData, this);
     }
 
     const coinsConfirmed = receivedData.data.slice(0, 2);
@@ -435,15 +428,7 @@ export class TransactionSender extends CyFlow {
       throw new ExitFlowError();
     }
     if (receivedData.commandType === 76) {
-      logger.info('No such wallet exists on the device');
-      if (receivedData.data.startsWith('02')) {
-        // Wallet does not exist
-        this.emit('noWalletFound', false);
-      } else {
-        // Wallet is in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(receivedData, this);
     }
 
     const coinsConfirmed = receivedData.data.slice(0, 2);
