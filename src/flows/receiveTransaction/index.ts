@@ -21,6 +21,8 @@ export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
   passphraseExists?: boolean;
   pinExists?: boolean;
   customAccount?: string;
+  userAction?: any;
+  replaceAccountAction?: any;
 }
 
 interface RunParams extends TransactionReceiverRunOptions {
@@ -73,7 +75,10 @@ export class TransactionReceiver extends CyFlow {
     coinType,
     receiveAddress,
     receiveAddressPath,
-    passphraseExists = false
+    passphraseExists = false,
+    customAccount,
+    userAction,
+    replaceAccountAction
   }: RunParams) {
     const coin = COINS[coinType];
 
@@ -111,8 +116,15 @@ export class TransactionReceiver extends CyFlow {
       throw new ExitFlowError();
     }
 
+    let nearBlockVerify = false;
     if (data.commandType === 65 && data.data === '01') {
       this.emit('coinsConfirmed', true);
+      if(coin.group === CoinGroup.Near && customAccount) {
+        nearBlockVerify = true;
+      }
+    } else if (data.commandType === 65 && data.data === '02') {
+      this.emit('coinsConfirmed', true);
+      this.emit('customAccountExists', true);
     } else if (data.commandType === 65 && data.data === '00') {
       this.emit('noXpub');
       throw new ExitFlowError();
@@ -158,6 +170,22 @@ export class TransactionReceiver extends CyFlow {
       this.emit('pinEntered', false);
       throw new ExitFlowError();
     }
+    	
+
+
+
+    console.log(userAction,nearBlockVerify);
+
+    if (nearBlockVerify) {
+      // wait for user here
+      console.log("waiting...");
+      await userAction.promise;
+      console.log("resolved");
+      await connection.sendData(96, '01');
+      await connection.receiveData([97], 60000);
+    }
+
+    let nearReplaceAccount = false;
 
     this.emit('receiveAddress', receiveAddress);
     const addressesVerified = await connection.receiveData([64], 60000);
@@ -174,11 +202,24 @@ export class TransactionReceiver extends CyFlow {
       }
 
       this.emit('addressVerified', address);
+    } else if (addressesVerified.data === '02') {
+      this.emit('replaceAccountRequired', true);
+      nearReplaceAccount = true;
     } else if (addressesVerified.data === '00') {
       this.emit('addressVerified', false);
       throw new ExitFlowError();
     } else {
       throw new Error('Invalid command');
+    }
+
+    console.log(replaceAccountAction,nearReplaceAccount);
+    if (nearReplaceAccount) {
+      //wait for user here
+      console.log("waiting...");
+      await replaceAccountAction.promise;
+      console.log("resolved");
+      await connection.sendData(98, '01');
+      await connection.receiveData([99], 60000);
     }
 
     await connection.sendData(42, '01');
@@ -359,7 +400,7 @@ export class TransactionReceiver extends CyFlow {
       xpub,
       zpub,
       contractAbbr = 'ETH',
-      customAccount
+      customAccount,
     } = params;
 
     let flowInterupted = false;
