@@ -170,7 +170,7 @@ export class CoinAdder extends CyFlow {
       expectedCommandTypes: [46, 49, 75, 76, 71, 81],
       onStatus: status => {
         if (
-          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_VERIFY &&
+          status.flowStatus > ADD_COINS_TASKS.ADD_COINS_VERIFY &&
           requestAcceptedState === 0
         ) {
           requestAcceptedState = 1;
