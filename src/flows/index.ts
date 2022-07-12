@@ -129,7 +129,7 @@ export abstract class CyFlow extends EventEmitter {
         if (packetVersion === PacketVersionMap.v3) {
           const sequenceNumber = connection.getNewSequenceNumber();
           connection
-            .sendAbort(sequenceNumber)
+            .sendAbort({ sequenceNumber })
             .then(() => resolve(true))
             .catch(e => reject(e));
         } else {

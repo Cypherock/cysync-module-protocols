@@ -291,14 +291,7 @@ export class TransactionReceiver extends CyFlow {
     }
 
     if (addressVerified.commandType === 76) {
-      if (addressVerified.data.startsWith('02')) {
-        // Wallet does not exist
-        this.emit('noWalletFound', false);
-      } else {
-        // Wallet is in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(addressVerified, this);
     }
 
     if (addressVerified.commandType === 63) {
