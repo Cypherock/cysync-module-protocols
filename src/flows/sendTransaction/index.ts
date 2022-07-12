@@ -941,7 +941,8 @@ export class TransactionSender extends CyFlow {
       gasLimit: 21000,
       contractAddress: undefined,
       contractAbbr: undefined
-    }
+    },
+    customAccount?: string
   ) {
     try {
       this.cancelled = false;
@@ -1012,7 +1013,8 @@ export class TransactionSender extends CyFlow {
         const calcData = await wallet.approximateTxnFee(
           outputList[0].value,
           feeRate,
-          isSendAll
+          isSendAll,
+          customAccount
         );
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))

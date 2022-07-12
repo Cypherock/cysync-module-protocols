@@ -119,7 +119,7 @@ export class TransactionReceiver extends CyFlow {
     let nearBlockVerify = false;
     if (data.commandType === 65 && data.data === '01') {
       this.emit('coinsConfirmed', true);
-      if(coin.group === CoinGroup.Near && customAccount) {
+      if (coin.group === CoinGroup.Near && customAccount) {
         nearBlockVerify = true;
       }
     } else if (data.commandType === 65 && data.data === '02') {
@@ -170,19 +170,19 @@ export class TransactionReceiver extends CyFlow {
       this.emit('pinEntered', false);
       throw new ExitFlowError();
     }
-    	
 
-
-
-    console.log(userAction,nearBlockVerify);
 
     if (nearBlockVerify) {
-      // wait for user here
-      console.log("waiting...");
       await userAction.promise;
-      console.log("resolved");
       await connection.sendData(96, '01');
-      await connection.receiveData([97], 60000);
+      const verifiedAccountId = await connection.receiveData([97], 60000);
+      console.log(verifiedAccountId);
+      if(verifiedAccountId.data.startsWith('01')) {
+        this.emit('accountVerified', true);
+      }else{
+        this.emit('accountVerified', false);
+        throw new ExitFlowError();
+      }
     }
 
     let nearReplaceAccount = false;
@@ -202,7 +202,8 @@ export class TransactionReceiver extends CyFlow {
       }
 
       this.emit('addressVerified', address);
-    } else if (addressesVerified.data === '02') {
+    } else if (addressesVerified.data.startsWith('02')) {
+      this.emit('addressVerified', customAccount);
       this.emit('replaceAccountRequired', true);
       nearReplaceAccount = true;
     } else if (addressesVerified.data === '00') {
@@ -212,14 +213,17 @@ export class TransactionReceiver extends CyFlow {
       throw new Error('Invalid command');
     }
 
-    console.log(replaceAccountAction,nearReplaceAccount);
     if (nearReplaceAccount) {
-      //wait for user here
-      console.log("waiting...");
       await replaceAccountAction.promise;
-      console.log("resolved");
       await connection.sendData(98, '01');
-      await connection.receiveData([99], 60000);
+      const verifiedReplaceAccount = await connection.receiveData([99], 60000);
+      console.log(verifiedReplaceAccount);
+      if(verifiedReplaceAccount.data.startsWith('01')) {
+        this.emit('replaceAccountVerified', true);
+      }else{
+        this.emit('replaceAccountVerified', false);
+        throw new ExitFlowError();
+      }
     }
 
     await connection.sendData(42, '01');
@@ -400,7 +404,7 @@ export class TransactionReceiver extends CyFlow {
       xpub,
       zpub,
       contractAbbr = 'ETH',
-      customAccount,
+      customAccount
     } = params;
 
     let flowInterupted = false;
