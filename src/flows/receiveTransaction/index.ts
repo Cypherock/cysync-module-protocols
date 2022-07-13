@@ -8,6 +8,7 @@ import {
 import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
+import { commandHandler76 } from '../../handlers';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -102,14 +103,7 @@ export class TransactionReceiver extends CyFlow {
       throw new ExitFlowError();
     }
     if (data.commandType === 76) {
-      if (data.data.startsWith('02')) {
-        // Wallet does not exist
-        this.emit('noWalletFound', false);
-      } else {
-        // Wallet is in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(data, this);
     }
     if (data.commandType === 63 && data.data === '00') {
       this.emit('coinsConfirmed', false);
@@ -347,14 +341,7 @@ export class TransactionReceiver extends CyFlow {
     }
 
     if (addressVerified.commandType === 76) {
-      if (addressVerified.data.startsWith('02')) {
-        // Wallet does not exist
-        this.emit('noWalletFound', false);
-      } else {
-        // Wallet is in partial state
-        this.emit('noWalletFound', true);
-      }
-      throw new ExitFlowError();
+      commandHandler76(addressVerified, this);
     }
 
     if (addressVerified.commandType === 63) {
