@@ -834,10 +834,10 @@ export class TransactionSender extends CyFlow {
           const res = await Server.near.transaction
             .getFees({ network })
             .request();
-          feeRate = res.data / 10 ** coin.decimal;
+          feeRate = res.data;
         }
 
-        totalFees = feeRate;
+        totalFees = feeRate / 10 ** coin.decimal;
       } else {
         wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
 
