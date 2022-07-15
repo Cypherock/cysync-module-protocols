@@ -125,6 +125,13 @@ export abstract class CyFlow extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.cancelled = true;
       if (connection && connection.isOpen()) {
+        if (connection.inBootloader) {
+          connection
+            .sendBootloaderAbort()
+            .then(() => resolve(true))
+            .catch(e => reject(e));
+          return;
+        }
         const packetVersion = connection.getPacketVersion();
         if (packetVersion === PacketVersionMap.v3) {
           const sequenceNumber = connection.getNewSequenceNumber();
