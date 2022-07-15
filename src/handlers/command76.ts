@@ -3,7 +3,8 @@ import { CyFlow, ExitFlowError } from '../flows';
 export enum WalletStates {
   NO_WALLET_FOUND = 0,
   WALLET_PARTIAL_STATE = 1,
-  WALLET_NOT_PRESENT = 2
+  WALLET_NOT_PRESENT = 2,
+  NO_VALID_WALLET_FOUND = 3
 }
 
 export const commandHandler76 = (
@@ -18,6 +19,11 @@ export const commandHandler76 = (
     flow.emit('noWalletFound', WalletStates.WALLET_PARTIAL_STATE);
   } else if (data.data.startsWith('02')) {
     flow.emit('noWalletFound', WalletStates.WALLET_NOT_PRESENT);
+  } else if (data.data.startsWith('03')) {
+    flow.emit('noWalletFound', WalletStates.NO_VALID_WALLET_FOUND);
+  } else {
+    // Default behaviour
+    flow.emit('noWalletFound', WalletStates.NO_VALID_WALLET_FOUND);
   }
   throw new ExitFlowError();
 };
