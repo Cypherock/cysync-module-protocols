@@ -155,7 +155,7 @@ export class CardAuthenticator extends CyFlow {
     });
 
     if (cardData.commandType === 70 && cardData.data.startsWith('00')) {
-      this.emit('cardError');
+      this.emit('acceptedRequest', false);
       throw new ExitFlowError();
     }
 
