@@ -7,7 +7,7 @@ import {
   PacketVersionMap,
   StatusData
 } from '@cypherock/communication';
-import { AddressDB } from '@cypherock/database';
+import { AddressDB, TransactionDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
 import { NearWallet, BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
@@ -17,6 +17,7 @@ import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionSenderRunOptions extends CyFlowRunOptions {
+  transactionDB: TransactionDB;
   addressDB: AddressDB;
   walletId: string;
   pinExists: boolean;
@@ -711,6 +712,7 @@ export class TransactionSender extends CyFlow {
     const {
       connection,
       addressDB,
+      transactionDB,
       walletId,
       xpub,
       zpub,
@@ -799,7 +801,10 @@ export class TransactionSender extends CyFlow {
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
       } else if (coin instanceof NearCoinData) {
         wallet = new NearWallet(xpub, coin);
-        metaData = await wallet.generateMetaData(fee);
+        metaData = await wallet.generateMetaData(
+          fee,
+          newAccountId ? true : false
+        );
         const { network } = coin;
         const txnData = newAccountId
           ? await wallet.generateCreateAccountTransaction(
@@ -824,7 +829,14 @@ export class TransactionSender extends CyFlow {
 
         totalFees = feeRate / 10 ** coin.decimal;
       } else {
-        wallet = new BitcoinWallet(xpub, coinType, walletId, zpub, addressDB);
+        wallet = new BitcoinWallet({
+          xpub,
+          coinType,
+          walletId,
+          zpub,
+          addressDb: addressDB,
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;
@@ -927,6 +939,7 @@ export class TransactionSender extends CyFlow {
       contractAddress: undefined,
       contractAbbr: undefined
     },
+    transactionDB?: TransactionDB,
     customAccount?: string
   ) {
     try {
@@ -1019,7 +1032,13 @@ export class TransactionSender extends CyFlow {
           );
         }
       } else {
-        const wallet = new BitcoinWallet(xpub, coinType, walletId, zpub);
+        const wallet = new BitcoinWallet({
+          xpub,
+          coinType,
+          walletId,
+          zpub,
+          transactionDb: transactionDB
+        });
 
         if (fee) {
           feeRate = fee;

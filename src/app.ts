@@ -2,7 +2,6 @@ export * from './flows/addCoin';
 export * from './flows/addWallet';
 export * from './flows/sendTransaction';
 export * from './flows/receiveTransaction';
-export * from './flows/coinSpecificData';
 export * from './flows/deviceUpdater';
 export * from './flows/cardAuth';
 export * from './flows/deviceAuth';
