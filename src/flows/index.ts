@@ -49,7 +49,7 @@ export abstract class CyFlow extends EventEmitter {
         const version = connection.getPacketVersion();
 
         if (version === PacketVersionMap.v3) {
-          const status = await connection.getStatus();
+          const status = await connection.getStatus({ maxTries: 2 });
           resolve(status.deviceIdleState === DeviceIdleState.IDLE);
         } else {
           await connection.sendData(41, '00', 2);
@@ -125,11 +125,18 @@ export abstract class CyFlow extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.cancelled = true;
       if (connection && connection.isOpen()) {
+        if (connection.inBootloader) {
+          connection
+            .sendBootloaderAbort()
+            .then(() => resolve(true))
+            .catch(e => reject(e));
+          return;
+        }
         const packetVersion = connection.getPacketVersion();
         if (packetVersion === PacketVersionMap.v3) {
           const sequenceNumber = connection.getNewSequenceNumber();
           connection
-            .sendAbort(sequenceNumber)
+            .sendAbort({ sequenceNumber })
             .then(() => resolve(true))
             .catch(e => reject(e));
         } else {
