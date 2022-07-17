@@ -1,4 +1,9 @@
-import { PacketVersionMap } from '@cypherock/communication';
+import {
+  DeviceError,
+  DeviceErrorType,
+  PacketVersion,
+  PacketVersionMap
+} from '@cypherock/communication';
 
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -28,10 +33,26 @@ export class DeviceUpdater extends CyFlow {
       if (!inBootloaderMode) {
         await this.onStart(connection);
 
+        let packetVersion: PacketVersion;
+        try {
+          packetVersion = connection.getPacketVersion();
+        } catch (error) {
+          if (
+            !(
+              error instanceof DeviceError &&
+              error.code === DeviceErrorType.NO_WORKING_PACKET_VERSION
+            )
+          ) {
+            throw error;
+          }
+
+          await connection.isDeviceSupported();
+          packetVersion = connection.getPacketVersion();
+        }
+
         const ready = await this.deviceReady(connection);
 
         if (ready) {
-          const packetVersion = connection.getPacketVersion();
           let isConfirmed = false;
 
           if (packetVersion === PacketVersionMap.v3) {
