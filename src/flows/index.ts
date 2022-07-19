@@ -49,19 +49,13 @@ export abstract class CyFlow extends EventEmitter {
         const version = connection.getPacketVersion();
 
         if (version === PacketVersionMap.v3) {
-          let status = await connection.getStatus({ maxTries: 2 });
-          if (
-            status.deviceIdleState === DeviceIdleState.USB &&
-            !status.abortDisabled
-          ) {
-            logger.info('Sending abort from deviceReady');
-            await connection.sendAbort({
-              sequenceNumber: connection.getNewSequenceNumber(),
-              maxTries: 2
-            });
-            await sleep(200);
-            status = await connection.getStatus({ maxTries: 2 });
-          }
+          logger.info('Sending abort from deviceReady');
+          await connection.sendAbort({
+            sequenceNumber: connection.getNewSequenceNumber(),
+            maxTries: 2
+          });
+          await sleep(200);
+          const status = await connection.getStatus({ maxTries: 2 });
           resolve(status.deviceIdleState === DeviceIdleState.IDLE);
         } else {
           await connection.sendData(41, '00', 2);
