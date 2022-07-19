@@ -636,8 +636,8 @@ export class TransactionSender extends CyFlow {
 
       if (coin instanceof EthCoinData) {
         const token = data.contractAbbr
-          ? coin.erc20TokensList[data.contractAbbr.toLowerCase()]
-          : undefined;
+          ? coin.tokenList[data.contractAbbr.toLowerCase()]
+          : coin;
 
         if (!token) {
           throw new Error('Invalid token or coinType');
@@ -839,8 +839,8 @@ export class TransactionSender extends CyFlow {
           .toString(10);
 
         const token = data.contractAbbr
-          ? coin.erc20TokensList[data.contractAbbr]
-          : undefined;
+          ? coin.tokenList[data.contractAbbr]
+          : coin;
 
         if (!token) {
           throw new Error('Invalid token or coinType');
