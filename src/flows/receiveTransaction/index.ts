@@ -431,7 +431,7 @@ export class TransactionReceiver extends CyFlow {
           sequenceNumber
         });
         let nearAccountVerifiedState = 0;
-        let nearAccountVerifiedStatus =
+        const nearAccountVerifiedStatus =
           RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_DISPLAY_ADDR_NEAR;
         const nearAddressVerified = await connection.waitForCommandOutput({
           sequenceNumber,

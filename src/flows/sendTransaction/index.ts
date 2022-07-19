@@ -9,7 +9,7 @@ import {
 } from '@cypherock/communication';
 import { AddressDB, TransactionDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
-import { NearWallet, BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
+import { BitcoinWallet, EthereumWallet, NearWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
 
 import { commandHandler76 } from '../../handlers';
