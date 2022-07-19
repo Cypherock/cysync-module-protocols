@@ -65,6 +65,28 @@ enum RECEIVE_TRANSACTION_STATUS_ETH {
   RECV_TXN_FINAL_SCREEN_ETH
 }
 
+enum RECEIVE_TRANSACTION_STATUS_NEAR {
+  RECV_TXN_FIND_XPUB_NEAR = 1,
+  RECV_TXN_ENTER_PASSPHRASE_NEAR,
+  RECV_TXN_CONFIRM_PASSPHRASE_NEAR,
+  RECV_TXN_CHECK_PIN_NEAR,
+  RECV_TXN_ENTER_PIN_NEAR,
+  RECV_TXN_TAP_CARD_NEAR,
+  RECV_TXN_TAP_CARD_SEND_CMD_NEAR,
+  RECV_TXN_READ_DEVICE_SHARE_NEAR,
+  RECV_TXN_DERIVE_ADD_SCREEN_NEAR,
+  RECV_TXN_DERIVE_ADD_NEAR,
+  RECV_TXN_WAIT_FOR_LINK_NEAR,
+  RECV_TXN_DISPLAY_ACC_NEAR,
+  RECV_TXN_DISPLAY_ADDR_NEAR,
+  RECV_TXN_WAIT_FOR_REPLACE_NEAR_SCREEN,
+  RECV_TXN_WAIT_FOR_REPLACE_NEAR,
+  RECV_TXN_SELECT_REPLACE_ACC_NEAR,
+  RECV_TXN_VERIFY_SAVE_ACC_NEAR,
+  RECV_TXN_WAITING_SCREEN_NEAR,
+  RECV_TXN_FINAL_SCREEN_NEAR
+}
+
 export class TransactionReceiver extends CyFlow {
   constructor() {
     super();
@@ -165,15 +187,14 @@ export class TransactionReceiver extends CyFlow {
       throw new ExitFlowError();
     }
 
-
     if (nearBlockVerify) {
       await userAction.promise;
       await connection.sendData(96, '01');
       const verifiedAccountId = await connection.receiveData([97], 60000);
       console.log(verifiedAccountId);
-      if(verifiedAccountId.data.startsWith('01')) {
+      if (verifiedAccountId.data.startsWith('01')) {
         this.emit('accountVerified', true);
-      }else{
+      } else {
         this.emit('accountVerified', false);
         throw new ExitFlowError();
       }
@@ -212,9 +233,9 @@ export class TransactionReceiver extends CyFlow {
       await connection.sendData(98, '01');
       const verifiedReplaceAccount = await connection.receiveData([99], 60000);
       console.log(verifiedReplaceAccount);
-      if(verifiedReplaceAccount.data.startsWith('01')) {
+      if (verifiedReplaceAccount.data.startsWith('01')) {
         this.emit('replaceAccountVerified', true);
-      }else{
+      } else {
         this.emit('replaceAccountVerified', false);
         throw new ExitFlowError();
       }
@@ -230,7 +251,10 @@ export class TransactionReceiver extends CyFlow {
     receiveAddress,
     receiveAddressPath,
     passphraseExists = false,
-    pinExists = false
+    pinExists = false,
+    customAccount,
+    userAction,
+    replaceAccountAction
   }: RunParams) {
     const coin = COINS[coinType];
 
@@ -245,7 +269,7 @@ export class TransactionReceiver extends CyFlow {
       walletId
     });
 
-    const sequenceNumber = connection.getNewSequenceNumber();
+    let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
       commandType: 59,
       data: walletId + receiveAddressPath,
@@ -262,6 +286,8 @@ export class TransactionReceiver extends CyFlow {
     this.emit('receiveAddress', receiveAddress);
 
     const isEth = [CoinGroup.Ethereum, CoinGroup.Ethereum].includes(coin.group);
+    const isNear = [CoinGroup.Near].includes(coin.group);
+
     let requestAcceptedCmdStatus: number =
       RECEIVE_TRANSACTION_STATUS.RECV_TXN_FIND_XPUB;
     let passphraseEnteredCmdStatus: number =
@@ -280,11 +306,209 @@ export class TransactionReceiver extends CyFlow {
         RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_CHECK_PIN_ETH;
       cardTapCmdStatus =
         RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_TAP_CARD_SEND_CMD_ETH;
+    } else if (isNear) {
+      requestAcceptedCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_FIND_XPUB_NEAR;
+      passphraseEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_CONFIRM_PASSPHRASE_NEAR;
+      pinEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_CHECK_PIN_NEAR;
+      cardTapCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_TAP_CARD_SEND_CMD_NEAR;
+    }
+
+    if (isNear) {
+      const coinsConfirmed = await connection.waitForCommandOutput({
+        sequenceNumber,
+        expectedCommandTypes: [75, 76, 65, 63],
+        onStatus: status => {
+          if (
+            status.flowStatus >= requestAcceptedCmdStatus &&
+            requestAcceptedState === 0
+          ) {
+            requestAcceptedState = 1;
+          }
+
+          if (requestAcceptedState === 1) {
+            requestAcceptedState = 2;
+            this.emit('coinsConfirmed', true);
+          }
+        }
+      });
+
+      if (coinsConfirmed.commandType === 75) {
+        this.emit('locked');
+        throw new ExitFlowError();
+      }
+
+      if (coinsConfirmed.commandType === 76) {
+        commandHandler76(coinsConfirmed, this);
+      }
+
+      if (coinsConfirmed.commandType === 63) {
+        this.emit('coinsConfirmed', false);
+        throw new ExitFlowError();
+      }
+
+      if (coinsConfirmed.commandType === 65 && coinsConfirmed.data === '01') {
+        this.emit('coinsConfirmed', true);
+      } else if (
+        coinsConfirmed.commandType === 65 &&
+        coinsConfirmed.data === '02'
+      ) {
+        this.emit('coinsConfirmed', true);
+        this.emit('customAccountExists', true);
+      } else if (
+        coinsConfirmed.commandType === 65 &&
+        coinsConfirmed.data === '00'
+      ) {
+        this.emit('noXpub');
+        throw new ExitFlowError();
+      } else {
+        throw new Error('Invalid command');
+      }
+
+      sequenceNumber = connection.getNewSequenceNumber();
+      await connection.sendCommand({
+        commandType: 42,
+        data: '01',
+        sequenceNumber
+      });
+      const nearCustomAccount = await connection.waitForCommandOutput({
+        sequenceNumber,
+        expectedCommandTypes: [96, 71, 81, 64],
+        onStatus: status => {
+          if (
+            passphraseExists &&
+            status.flowStatus >= passphraseEnteredCmdStatus &&
+            passphraseEnteredState === 0
+          ) {
+            passphraseEnteredState = 1;
+          }
+
+          if (
+            pinExists &&
+            status.flowStatus >= pinEnteredCmdStatus &&
+            pinEnteredState === 0
+          ) {
+            pinEnteredState = 1;
+          }
+
+          if (status.flowStatus >= cardTapCmdStatus && cardTapState === 0) {
+            cardTapState = 1;
+          }
+
+          if (passphraseEnteredState === 1) {
+            passphraseEnteredState = 2;
+            this.emit('passphraseEntered');
+          }
+
+          if (pinEnteredState === 1) {
+            pinEnteredState = 2;
+            this.emit('pinEntered', true);
+          }
+
+          if (cardTapState === 1) {
+            cardTapState = 2;
+            this.emit('cardTapped');
+          }
+        }
+      });
+
+      if (nearCustomAccount.commandType === 81) {
+        this.emit('noWalletOnCard');
+        throw new ExitFlowError();
+      }
+      if (nearCustomAccount.commandType === 71) {
+        this.emit('cardError');
+        throw new ExitFlowError();
+      }
+      if (nearCustomAccount.commandType === 96) {
+        await userAction.promise;
+
+        sequenceNumber = connection.getNewSequenceNumber();
+        await connection.sendCommand({
+          commandType: 96,
+          data: '01',
+          sequenceNumber
+        });
+        let nearAccountVerifiedState = 0;
+        let nearAccountVerifiedStatus =
+          RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_DISPLAY_ADDR_NEAR;
+        const nearAddressVerified = await connection.waitForCommandOutput({
+          sequenceNumber,
+          expectedCommandTypes: [97, 64],
+          onStatus: status => {
+            if (
+              status.flowStatus >= nearAccountVerifiedStatus &&
+              nearAccountVerifiedState === 0
+            ) {
+              nearAccountVerifiedState = 1;
+            }
+
+            if (nearAccountVerifiedState === 1) {
+              nearAccountVerifiedState = 2;
+              this.emit('accountVerified', true);
+            }
+          }
+        });
+
+        if (nearAddressVerified.commandType === 97) {
+          this.emit('accountVerified', false);
+          throw new ExitFlowError();
+        }
+
+        if (nearAddressVerified.data.startsWith('01')) {
+          const addressHex = nearAddressVerified.data.slice(2);
+          this.emit('addressVerified', addressHex);
+        } else if (nearAddressVerified.data === '00') {
+          this.emit('addressVerified', false);
+          throw new ExitFlowError();
+        } else if (nearAddressVerified.data.startsWith('02')) {
+          this.emit('addressVerified', customAccount);
+          this.emit('replaceAccountRequired', true);
+
+          await replaceAccountAction.promise;
+          sequenceNumber = connection.getNewSequenceNumber();
+          await connection.sendCommand({
+            commandType: 98,
+            data: '01',
+            sequenceNumber
+          });
+          const verifiedReplaceAccount = await connection.waitForCommandOutput({
+            sequenceNumber,
+            expectedCommandTypes: [99],
+            onStatus: () => {}
+          });
+          if (verifiedReplaceAccount.data.startsWith('01')) {
+            this.emit('replaceAccountVerified', true);
+          } else {
+            this.emit('replaceAccountVerified', false);
+            throw new ExitFlowError();
+          }
+        } else {
+          throw new Error('Invalid command');
+        }
+      } else if (nearCustomAccount.commandType === 64) {
+        if (nearCustomAccount.data.startsWith('01')) {
+          const addressHex = nearCustomAccount.data.slice(2);
+          this.emit('addressVerified', addressHex);
+        } else if (nearCustomAccount.data === '00') {
+          this.emit('addressVerified', false);
+          throw new ExitFlowError();
+        } else {
+          throw new Error('Invalid command');
+        }
+      } else {
+        throw new Error('Invalid command');
+      }
+
+      return;
     }
 
     const addressVerified = await connection.waitForCommandOutput({
       sequenceNumber,
-      expectedCommandTypes: [75, 76, 64, 63, 65, 71, 81],
+      expectedCommandTypes: [75, 76, 64, 65, 63, 71, 81],
       onStatus: status => {
         if (
           status.flowStatus >= requestAcceptedCmdStatus &&
