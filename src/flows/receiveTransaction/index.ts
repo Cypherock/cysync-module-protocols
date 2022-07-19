@@ -191,7 +191,6 @@ export class TransactionReceiver extends CyFlow {
       await userAction.promise;
       await connection.sendData(96, '01');
       const verifiedAccountId = await connection.receiveData([97], 60000);
-      console.log(verifiedAccountId);
       if (verifiedAccountId.data.startsWith('01')) {
         this.emit('accountVerified', true);
       } else {
@@ -232,7 +231,6 @@ export class TransactionReceiver extends CyFlow {
       await replaceAccountAction.promise;
       await connection.sendData(98, '01');
       const verifiedReplaceAccount = await connection.receiveData([99], 60000);
-      console.log(verifiedReplaceAccount);
       if (verifiedReplaceAccount.data.startsWith('01')) {
         this.emit('replaceAccountVerified', true);
       } else {
