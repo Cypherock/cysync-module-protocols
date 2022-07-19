@@ -89,10 +89,10 @@
     node-cache "^5.1.2"
     winston "^3.5.1"
 
-"@cypherock/wallet@3.0.1-beta.34":
-  version "3.0.1-beta.34"
-  resolved "https://registry.yarnpkg.com/@cypherock/wallet/-/wallet-3.0.1-beta.34.tgz#8c4af3125de58e8f1d8ab84872d66028c1ede2e2"
-  integrity sha512-7nGw4eevhDjai/3QsQ0StrAIdfJUW/t3d5Hk2lf8ZFXmL4gaE0HBqzXEmuYhlm00hZCQyi/3PvclG5CP0TH8Eg==
+"@cypherock/wallet@3.0.1-beta.35":
+  version "3.0.1-beta.35"
+  resolved "https://registry.yarnpkg.com/@cypherock/wallet/-/wallet-3.0.1-beta.35.tgz#bad1554cd6d6fdf740ddeeeaae2a7fa61d0df878"
+  integrity sha512-ipi2fGbuZWgX57UL5cSr/jqI1wj1nrrD47ttOCpOOUPD4rlyyvWNpdkaYTw/cW7J3D5iwUPuDEy2B5rm9xWGmw==
   dependencies:
     "@bitauth/libauth" "^1.19.1"
     "@cypherock/communication" "3.0.1-beta.21"
