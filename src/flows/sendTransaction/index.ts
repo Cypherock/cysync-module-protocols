@@ -93,25 +93,25 @@ enum SEND_TRANSACTION_STATUS_ETH {
 }
 
 enum SEND_TRANSACTION_STATUS_NEAR {
-    SEND_TXN_VERIFY_COIN_NEAR = 1,
-    SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN_NEAR,
-    SEND_TXN_VERIFY_TXN_NONCE_NEAR,
-    SEND_TXN_VERIFY_SENDER_ADDRESS_NEAR,
-    SEND_TXN_VERIFY_RECEIPT_ADDRESS_NEAR,
-    SEND_TXN_CALCULATE_AMOUNT_NEAR,
-    SEND_TXN_VERIFY_RECEIPT_AMOUNT_NEAR,
-    SEND_TXN_VERIFY_RECEIPT_FEES_NEAR,
-    SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_NEAR,
-    SEND_TXN_ENTER_PASSPHRASE_NEAR,
-    SEND_TXN_CONFIRM_PASSPHRASE_NEAR,
-    SEND_TXN_CHECK_PIN_NEAR,
-    SEND_TXN_ENTER_PIN_NEAR,
-    SEND_TXN_TAP_CARD_NEAR,
-    SEND_TXN_TAP_CARD_SEND_CMD_NEAR,
-    SEND_TXN_READ_DEVICE_SHARE_NEAR,
-    SEND_TXN_SIGN_TXN_NEAR,
-    SEND_TXN_WAITING_SCREEN_NEAR,
-    SEND_TXN_FINAL_SCREEN_NEAR
+  SEND_TXN_VERIFY_COIN_NEAR = 1,
+  SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN_NEAR,
+  SEND_TXN_VERIFY_TXN_NONCE_NEAR,
+  SEND_TXN_VERIFY_SENDER_ADDRESS_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_ADDRESS_NEAR,
+  SEND_TXN_CALCULATE_AMOUNT_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_AMOUNT_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_FEES_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_NEAR,
+  SEND_TXN_ENTER_PASSPHRASE_NEAR,
+  SEND_TXN_CONFIRM_PASSPHRASE_NEAR,
+  SEND_TXN_CHECK_PIN_NEAR,
+  SEND_TXN_ENTER_PIN_NEAR,
+  SEND_TXN_TAP_CARD_NEAR,
+  SEND_TXN_TAP_CARD_SEND_CMD_NEAR,
+  SEND_TXN_READ_DEVICE_SHARE_NEAR,
+  SEND_TXN_SIGN_TXN_NEAR,
+  SEND_TXN_WAITING_SCREEN_NEAR,
+  SEND_TXN_FINAL_SCREEN_NEAR
 }
 
 export class TransactionSender extends CyFlow {
@@ -184,7 +184,7 @@ export class TransactionSender extends CyFlow {
 
     await connection.sendData(52, unsignedTransaction);
 
-    if (!(coin instanceof EthCoinData) && !(coin instanceof NearCoinData)) {
+    if (!(coin instanceof EthCoinData)) {
       const utxoRequest = await connection.receiveData([51], 10000);
       if (utxoRequest.data !== '02') {
         throw new Error('Invalid data from device');
@@ -284,33 +284,10 @@ export class TransactionSender extends CyFlow {
 
       logger.info('Signed txn', { signedTxnEth });
       this.emit('signedTxn', signedTxnEth);
-    } else if (wallet instanceof NearWallet) {
-      if (!(coin instanceof NearCoinData)) {
-        throw new Error('Near Wallet found, but coin is not Near.');
-      }
-
-      const signedTxn = await connection.receiveData([54], 90000);
-      await connection.sendData(42, '01');
-
-      const signedTxnNear = wallet.getSignedTransaction(
-        unsignedTransaction,
-        signedTxn.data
-      );
-
-      try {
-        const isVerified = await wallet.verifySignedTxn(signedTxnNear);
-        this.emit('signatureVerify', { isVerified, index: 0 });
-      } catch (error) {
-        this.emit('signatureVerify', {
-          isVerified: false,
-          index: -1,
-          error
-        });
-      }
-
-      logger.info('Signed txn', { signedTxnNear });
-      this.emit('signedTxn', signedTxnNear);
     } else {
+      if (wallet instanceof NearWallet)
+        throw new Error('Near wallet not supported in legacy mode');
+
       const inputSignatures: string[] = [];
       for (const _ of txnInfo.inputs) {
         const inputSig = await connection.receiveData([54], 90000);
@@ -967,7 +944,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = res.data.FastGasPrice;
+          feeRate = Math.round(res.data / 1000000000);
         }
 
         const calcData = await wallet.approximateTxnFee(

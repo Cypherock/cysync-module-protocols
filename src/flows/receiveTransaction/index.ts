@@ -43,7 +43,6 @@ enum RECEIVE_TRANSACTION_STATUS {
   RECV_TXN_DERIVE_ADD_SCREEN,
   RECV_TXN_DERIVE_ADD,
   RECV_TXN_DISPLAY_ADDR,
-  RECV_TXN_DISPLAY_ADDR_NEAR,
   RECV_TXN_WAITING_SCREEN,
   RECV_TXN_FINAL_SCREEN
 }
@@ -98,10 +97,7 @@ export class TransactionReceiver extends CyFlow {
     coinType,
     receiveAddress,
     receiveAddressPath,
-    passphraseExists = false,
-    customAccount,
-    userAction,
-    replaceAccountAction
+    passphraseExists = false
   }: RunParams) {
     const coin = COINS[coinType];
 
@@ -132,15 +128,8 @@ export class TransactionReceiver extends CyFlow {
       throw new ExitFlowError();
     }
 
-    let nearBlockVerify = false;
     if (data.commandType === 65 && data.data === '01') {
       this.emit('coinsConfirmed', true);
-      if (coin.group === CoinGroup.Near && customAccount) {
-        nearBlockVerify = true;
-      }
-    } else if (data.commandType === 65 && data.data === '02') {
-      this.emit('coinsConfirmed', true);
-      this.emit('customAccountExists', true);
     } else if (data.commandType === 65 && data.data === '00') {
       this.emit('noXpub');
       throw new ExitFlowError();
@@ -187,20 +176,6 @@ export class TransactionReceiver extends CyFlow {
       throw new ExitFlowError();
     }
 
-    if (nearBlockVerify) {
-      await userAction.promise;
-      await connection.sendData(96, '01');
-      const verifiedAccountId = await connection.receiveData([97], 60000);
-      if (verifiedAccountId.data.startsWith('01')) {
-        this.emit('accountVerified', true);
-      } else {
-        this.emit('accountVerified', false);
-        throw new ExitFlowError();
-      }
-    }
-
-    let nearReplaceAccount = false;
-
     this.emit('receiveAddress', receiveAddress);
     const addressesVerified = await connection.receiveData([64], 60000);
     if (addressesVerified.data.startsWith('01')) {
@@ -209,34 +184,16 @@ export class TransactionReceiver extends CyFlow {
 
       if (coin instanceof EthCoinData) {
         address = `0x${addressHex.toLowerCase()}`;
-      } else if (coin instanceof NearCoinData) {
-        address = addressHex;
       } else {
         address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
       }
 
       this.emit('addressVerified', address);
-    } else if (addressesVerified.data.startsWith('02')) {
-      this.emit('addressVerified', customAccount);
-      this.emit('replaceAccountRequired', true);
-      nearReplaceAccount = true;
     } else if (addressesVerified.data === '00') {
       this.emit('addressVerified', false);
       throw new ExitFlowError();
     } else {
       throw new Error('Invalid command');
-    }
-
-    if (nearReplaceAccount) {
-      await replaceAccountAction.promise;
-      await connection.sendData(98, '01');
-      const verifiedReplaceAccount = await connection.receiveData([99], 60000);
-      if (verifiedReplaceAccount.data.startsWith('01')) {
-        this.emit('replaceAccountVerified', true);
-      } else {
-        this.emit('replaceAccountVerified', false);
-        throw new ExitFlowError();
-      }
     }
 
     await connection.sendData(42, '01');
