@@ -422,6 +422,7 @@ export class TransactionReceiver extends CyFlow {
         throw new ExitFlowError();
       }
       if (nearCustomAccount.commandType === 96) {
+        this.emit('cardTapped');
         await userAction.promise;
 
         sequenceNumber = connection.getNewSequenceNumber();
