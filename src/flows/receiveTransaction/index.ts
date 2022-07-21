@@ -3,8 +3,8 @@ import {
   COINS,
   EthCoinData,
   NearCoinData,
-  StatusData,
-  PacketVersionMap
+  PacketVersionMap,
+  StatusData
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
