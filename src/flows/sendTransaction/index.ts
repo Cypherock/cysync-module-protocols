@@ -381,7 +381,7 @@ export class TransactionSender extends CyFlow {
         SEND_TRANSACTION_STATUS_ETH.SEND_TXN_CONFIRM_PASSPHRASE_ETH;
       pinEnteredCmdStatus = SEND_TRANSACTION_STATUS_ETH.SEND_TXN_ENTER_PIN_ETH;
       cardTapCmdStatus =
-        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_TAP_CARD_SEND_CMD_NEAR;
+        SEND_TRANSACTION_STATUS_ETH.SEND_TXN_TAP_CARD_SEND_CMD_ETH;
     } else if (isNear) {
       requestAcceptedCmdStatus =
         SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_VERIFY_COIN_NEAR;
@@ -744,7 +744,7 @@ export class TransactionSender extends CyFlow {
           const res = await Server.eth.transaction
             .getFees({ network })
             .request();
-          feeRate = res.data.FastGasPrice;
+          feeRate = Math.round(res.data / 1000000000);
         }
 
         metaData = await wallet.generateMetaData(
