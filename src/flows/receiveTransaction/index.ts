@@ -3,6 +3,7 @@ import {
   COINS,
   EthCoinData,
   NearCoinData,
+  StatusData,
   PacketVersionMap
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
@@ -271,24 +272,62 @@ export class TransactionReceiver extends CyFlow {
       cardTapCmdStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_TAP_CARD_SEND_CMD_NEAR;
     }
+    const acceptStatus = (status: StatusData) => {
+      if (
+        status.flowStatus >= requestAcceptedCmdStatus &&
+        requestAcceptedState === 0
+      ) {
+        requestAcceptedState = 1;
+      }
+
+      if (requestAcceptedState === 1) {
+        requestAcceptedState = 2;
+        this.emit('coinsConfirmed', true);
+      }
+    };
+
+    const passphrasePinCardStatus = (status: StatusData) => {
+      if (
+        passphraseExists &&
+        status.flowStatus >= passphraseEnteredCmdStatus &&
+        passphraseEnteredState === 0
+      ) {
+        passphraseEnteredState = 1;
+      }
+
+      if (
+        pinExists &&
+        status.flowStatus >= pinEnteredCmdStatus &&
+        pinEnteredState === 0
+      ) {
+        pinEnteredState = 1;
+      }
+
+      if (status.flowStatus >= cardTapCmdStatus && cardTapState === 0) {
+        cardTapState = 1;
+      }
+
+      if (passphraseEnteredState === 1) {
+        passphraseEnteredState = 2;
+        this.emit('passphraseEntered');
+      }
+
+      if (pinEnteredState === 1) {
+        pinEnteredState = 2;
+        this.emit('pinEntered', true);
+      }
+
+      if (cardTapState === 1) {
+        cardTapState = 2;
+        this.emit('cardTapped');
+      }
+    };
 
     if (isNear) {
       const coinsConfirmed = await connection.waitForCommandOutput({
         sequenceNumber,
         expectedCommandTypes: [75, 76, 65, 63],
-        onStatus: status => {
-          if (
-            status.flowStatus >= requestAcceptedCmdStatus &&
-            requestAcceptedState === 0
-          ) {
-            requestAcceptedState = 1;
-          }
-
-          if (requestAcceptedState === 1) {
-            requestAcceptedState = 2;
-            this.emit('coinsConfirmed', true);
-          }
-        }
+        onStatus: acceptStatus
       });
 
       if (coinsConfirmed.commandType === 75) {
@@ -332,42 +371,7 @@ export class TransactionReceiver extends CyFlow {
       const nearCustomAccount = await connection.waitForCommandOutput({
         sequenceNumber,
         expectedCommandTypes: [96, 71, 81, 64],
-        onStatus: status => {
-          if (
-            passphraseExists &&
-            status.flowStatus >= passphraseEnteredCmdStatus &&
-            passphraseEnteredState === 0
-          ) {
-            passphraseEnteredState = 1;
-          }
-
-          if (
-            pinExists &&
-            status.flowStatus >= pinEnteredCmdStatus &&
-            pinEnteredState === 0
-          ) {
-            pinEnteredState = 1;
-          }
-
-          if (status.flowStatus >= cardTapCmdStatus && cardTapState === 0) {
-            cardTapState = 1;
-          }
-
-          if (passphraseEnteredState === 1) {
-            passphraseEnteredState = 2;
-            this.emit('passphraseEntered');
-          }
-
-          if (pinEnteredState === 1) {
-            pinEnteredState = 2;
-            this.emit('pinEntered', true);
-          }
-
-          if (cardTapState === 1) {
-            cardTapState = 2;
-            this.emit('cardTapped');
-          }
-        }
+        onStatus: passphrasePinCardStatus
       });
 
       if (nearCustomAccount.commandType === 81) {
@@ -466,52 +470,8 @@ export class TransactionReceiver extends CyFlow {
       sequenceNumber,
       expectedCommandTypes: [75, 76, 64, 65, 63, 71, 81],
       onStatus: status => {
-        if (
-          status.flowStatus >= requestAcceptedCmdStatus &&
-          requestAcceptedState === 0
-        ) {
-          requestAcceptedState = 1;
-        }
-
-        if (
-          passphraseExists &&
-          status.flowStatus >= passphraseEnteredCmdStatus &&
-          passphraseEnteredState === 0
-        ) {
-          passphraseEnteredState = 1;
-        }
-
-        if (
-          pinExists &&
-          status.flowStatus >= pinEnteredCmdStatus &&
-          pinEnteredState === 0
-        ) {
-          pinEnteredState = 1;
-        }
-
-        if (status.flowStatus >= cardTapCmdStatus && cardTapState === 0) {
-          cardTapState = 1;
-        }
-
-        if (requestAcceptedState === 1) {
-          requestAcceptedState = 2;
-          this.emit('coinsConfirmed', true);
-        }
-
-        if (passphraseEnteredState === 1) {
-          passphraseEnteredState = 2;
-          this.emit('passphraseEntered');
-        }
-
-        if (pinEnteredState === 1) {
-          pinEnteredState = 2;
-          this.emit('pinEntered', true);
-        }
-
-        if (cardTapState === 1) {
-          cardTapState = 2;
-          this.emit('cardTapped');
-        }
+        acceptStatus(status);
+        passphrasePinCardStatus(status);
       }
     });
 
