@@ -178,7 +178,7 @@ export class CoinAdder extends CyFlow {
 
         if (
           passphraseExists &&
-          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_CONFIRM_PASSPHRASE &&
+          status.flowStatus > ADD_COINS_TASKS.ADD_COINS_CONFIRM_PASSPHRASE &&
           passphraseEnteredState === 0
         ) {
           passphraseEnteredState = 1;
@@ -186,7 +186,7 @@ export class CoinAdder extends CyFlow {
 
         if (
           pinExists &&
-          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_ENTER_PIN &&
+          status.flowStatus >= ADD_COINS_TASKS.ADD_COINS_TAP_CARD_SEND_CMD &&
           pinEnteredState === 0
         ) {
           pinEnteredState = 1;
