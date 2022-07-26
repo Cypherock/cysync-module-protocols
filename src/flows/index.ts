@@ -6,7 +6,7 @@ import {
 } from '@cypherock/communication';
 import { EventEmitter } from 'events';
 
-import { logger } from '../utils';
+import { logger, sleep } from '../utils';
 
 export interface CyFlowRunOptions {
   connection: DeviceConnection;
@@ -49,6 +49,12 @@ export abstract class CyFlow extends EventEmitter {
         const version = connection.getPacketVersion();
 
         if (version === PacketVersionMap.v3) {
+          logger.info('Sending abort from deviceReady');
+          await connection.sendAbort({
+            sequenceNumber: connection.getNewSequenceNumber(),
+            maxTries: 2
+          });
+          await sleep(200);
           const status = await connection.getStatus({ maxTries: 2 });
           resolve(status.deviceIdleState === DeviceIdleState.IDLE);
         } else {
