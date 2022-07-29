@@ -2,12 +2,13 @@ import {
   CoinGroup,
   COINS,
   EthCoinData,
+  NearCoinData,
   PacketVersionMap,
   StatusData
 } from '@cypherock/communication';
 import { AddressDB, TransactionDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
-import { BitcoinWallet, EthereumWallet } from '@cypherock/wallet';
+import { BitcoinWallet, EthereumWallet, NearWallet } from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
 
 import { commandHandler76 } from '../../handlers';
@@ -22,6 +23,8 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
   passphraseExists: boolean;
   xpub: string;
   zpub?: string;
+  customAccount?: string;
+  newAccountId?: string;
   coinType: string;
   outputList: Array<{ address: string; value: BigNumber }>;
   fee: number;
@@ -37,7 +40,7 @@ interface RunParams extends TransactionSenderRunOptions {
   metaData: string;
   unsignedTransaction: string;
   utxoList: string[];
-  wallet: BitcoinWallet | EthereumWallet;
+  wallet: BitcoinWallet | EthereumWallet | NearWallet;
   txnInfo: any;
   inputs: any[];
 }
@@ -86,6 +89,28 @@ enum SEND_TRANSACTION_STATUS_ETH {
   SEND_TXN_SIGN_TXN_ETH,
   SEND_TXN_WAITING_SCREEN_ETH,
   SEND_TXN_FINAL_SCREEN_ETH
+}
+
+enum SEND_TRANSACTION_STATUS_NEAR {
+  SEND_TXN_VERIFY_COIN_NEAR = 1,
+  SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN_NEAR,
+  SEND_TXN_VERIFY_TXN_NONCE_NEAR,
+  SEND_TXN_VERIFY_SENDER_ADDRESS_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_ADDRESS_NEAR,
+  SEND_TXN_CALCULATE_AMOUNT_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_AMOUNT_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_FEES_NEAR,
+  SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_NEAR,
+  SEND_TXN_ENTER_PASSPHRASE_NEAR,
+  SEND_TXN_CONFIRM_PASSPHRASE_NEAR,
+  SEND_TXN_CHECK_PIN_NEAR,
+  SEND_TXN_ENTER_PIN_NEAR,
+  SEND_TXN_TAP_CARD_NEAR,
+  SEND_TXN_TAP_CARD_SEND_CMD_NEAR,
+  SEND_TXN_READ_DEVICE_SHARE_NEAR,
+  SEND_TXN_SIGN_TXN_NEAR,
+  SEND_TXN_WAITING_SCREEN_NEAR,
+  SEND_TXN_FINAL_SCREEN_NEAR
 }
 
 export class TransactionSender extends CyFlow {
@@ -259,6 +284,9 @@ export class TransactionSender extends CyFlow {
       logger.info('Signed txn', { signedTxnEth });
       this.emit('signedTxn', signedTxnEth);
     } else {
+      if (wallet instanceof NearWallet)
+        throw new Error('Near wallet not supported in legacy mode');
+
       const inputSignatures: string[] = [];
       for (const _ of txnInfo.inputs) {
         const inputSig = await connection.receiveData([54], 90000);
@@ -324,6 +352,7 @@ export class TransactionSender extends CyFlow {
     this.emit('metadataSent');
 
     const isEth = [CoinGroup.Ethereum, CoinGroup.Ethereum].includes(coin.group);
+    const isNear = [CoinGroup.Near].includes(coin.group);
 
     let requestAcceptedState = 0;
     let recipientVerifiedState = 0;
@@ -352,6 +381,17 @@ export class TransactionSender extends CyFlow {
       pinEnteredCmdStatus = SEND_TRANSACTION_STATUS_ETH.SEND_TXN_ENTER_PIN_ETH;
       cardTapCmdStatus =
         SEND_TRANSACTION_STATUS_ETH.SEND_TXN_TAP_CARD_SEND_CMD_ETH;
+    } else if (isNear) {
+      requestAcceptedCmdStatus =
+        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_VERIFY_COIN_NEAR;
+      recipientVerifiedCmdStatus =
+        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_NEAR;
+      passphraseEnteredCmdStatus =
+        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_CONFIRM_PASSPHRASE_NEAR;
+      pinEnteredCmdStatus =
+        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_ENTER_PIN_NEAR;
+      cardTapCmdStatus =
+        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_TAP_CARD_SEND_CMD_NEAR;
     }
 
     const onStatus = (status: StatusData) => {
@@ -460,7 +500,7 @@ export class TransactionSender extends CyFlow {
       sequenceNumber
     });
 
-    if (!(coin instanceof EthCoinData)) {
+    if (!(coin instanceof EthCoinData) && !(coin instanceof NearCoinData)) {
       const utxoRequest = await connection.waitForCommandOutput({
         sequenceNumber,
         expectedCommandTypes: [51],
@@ -540,6 +580,55 @@ export class TransactionSender extends CyFlow {
 
       logger.info('Signed txn', { signedTxnEth });
       this.emit('signedTxn', signedTxnEth);
+    } else if (wallet instanceof NearWallet) {
+      if (!(coin instanceof NearCoinData)) {
+        throw new Error('Near Wallet found, but coin is not Near.');
+      }
+
+      const signedTxn = await connection.waitForCommandOutput({
+        sequenceNumber,
+        expectedCommandTypes: [54, 79, 81, 71, 53],
+        onStatus
+      });
+
+      if (signedTxn.commandType === 79 || signedTxn.commandType === 53) {
+        this.emit('coinsConfirmed', false);
+        throw new ExitFlowError();
+      }
+      if (signedTxn.commandType === 81) {
+        this.emit('noWalletOnCard');
+        throw new ExitFlowError();
+      }
+      if (signedTxn.commandType === 71) {
+        this.emit('cardError');
+        throw new ExitFlowError();
+      }
+
+      sequenceNumber = connection.getNewSequenceNumber();
+      await connection.sendCommand({
+        commandType: 42,
+        data: '01',
+        sequenceNumber
+      });
+
+      const signedTxnNear = wallet.getSignedTransaction(
+        unsignedTransaction,
+        signedTxn.data
+      );
+
+      try {
+        const isVerified = await wallet.verifySignedTxn(signedTxnNear);
+        this.emit('signatureVerify', { isVerified, index: 0 });
+      } catch (error) {
+        this.emit('signatureVerify', {
+          isVerified: false,
+          index: -1,
+          error
+        });
+      }
+
+      logger.info('Signed txn', { signedTxnNear });
+      this.emit('signedTxn', signedTxnNear);
     } else {
       const inputSignatures: string[] = [];
       for (const _ of txnInfo.inputs) {
@@ -612,7 +701,9 @@ export class TransactionSender extends CyFlow {
         gasLimit: 21000,
         contractAddress: undefined,
         contractAbbr: undefined
-      }
+      },
+      customAccount,
+      newAccountId
     } = params;
     this.flowInterupted = false;
     try {
@@ -620,7 +711,7 @@ export class TransactionSender extends CyFlow {
       let unsignedTransaction = '';
       let metaData = '';
       let feeRate;
-      let wallet: BitcoinWallet | EthereumWallet;
+      let wallet: BitcoinWallet | EthereumWallet | NearWallet;
       let totalFees: number;
       let txnInfo: any;
       let inputs: any[];
@@ -687,6 +778,35 @@ export class TransactionSender extends CyFlow {
           .toString();
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
+      } else if (coin instanceof NearCoinData) {
+        wallet = new NearWallet(xpub, coin);
+        metaData = await wallet.generateMetaData(
+          fee,
+          newAccountId ? true : false
+        );
+        const { network } = coin;
+        const txnData = newAccountId
+          ? await wallet.generateCreateAccountTransaction(
+              newAccountId,
+              customAccount
+            )
+          : await wallet.generateUnsignedTransaction(
+              outputList[0].address,
+              outputList[0].value,
+              customAccount
+            );
+        ({ txn: unsignedTransaction, inputs, outputs } = txnData);
+        if (fee) {
+          feeRate = fee;
+        } else {
+          logger.info(`Fetching optimal fees from the internet.`);
+          const res = await Server.near.transaction
+            .getFees({ network })
+            .request();
+          feeRate = res.data;
+        }
+
+        totalFees = feeRate / 10 ** coin.decimal;
       } else {
         wallet = new BitcoinWallet({
           xpub,
@@ -798,7 +918,8 @@ export class TransactionSender extends CyFlow {
       contractAddress: undefined,
       contractAbbr: undefined
     },
-    transactionDB?: TransactionDB
+    transactionDB?: TransactionDB,
+    customAccount?: string
   ) {
     try {
       this.cancelled = false;
@@ -841,6 +962,44 @@ export class TransactionSender extends CyFlow {
         const token = data.contractAbbr
           ? coin.tokenList[data.contractAbbr]
           : coin;
+
+        if (!token) {
+          throw new Error('Invalid token or coinType');
+        }
+
+        if (isSendAll) {
+          this.emit(
+            'sendMaxAmount',
+            calcData.amount
+              .dividedBy(new BigNumber(token.multiplier))
+              .toString(10)
+          );
+        }
+      } else if (coin instanceof NearCoinData) {
+        const { network } = coin;
+
+        const wallet = new NearWallet(xpub, coin);
+
+        if (fee) {
+          feeRate = fee;
+        } else {
+          logger.info(`Fetching optimal fees from the internet for near.`);
+          const res = await Server.near.transaction
+            .getFees({ network })
+            .request();
+          feeRate = Math.round(res);
+        }
+
+        const calcData = await wallet.approximateTxnFee(
+          outputList[0].value,
+          feeRate,
+          isSendAll,
+          customAccount
+        );
+        totalFees = calcData.fees
+          .dividedBy(new BigNumber(coin.multiplier))
+          .toString(10);
+        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
 
         if (!token) {
           throw new Error('Invalid token or coinType');
