@@ -1,5 +1,4 @@
 import {
-  ALLCOINS,
   CoinGroup,
   COINS,
   EthCoinData,
@@ -727,7 +726,9 @@ export class TransactionSender extends CyFlow {
       }
 
       if (coin instanceof EthCoinData) {
-        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
+        const token = data.contractAbbr
+          ? coin.tokenList[data.contractAbbr.toLowerCase()]
+          : coin;
 
         if (!token) {
           throw new Error('Invalid token or coinType');
@@ -957,7 +958,10 @@ export class TransactionSender extends CyFlow {
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
           .toString(10);
-        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
+
+        const token = data.contractAbbr
+          ? coin.tokenList[data.contractAbbr]
+          : coin;
 
         if (!token) {
           throw new Error('Invalid token or coinType');
@@ -995,17 +999,12 @@ export class TransactionSender extends CyFlow {
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
           .toString(10);
-        const token = ALLCOINS[data?.contractAbbr?.toLowerCase() || coinType];
-
-        if (!token) {
-          throw new Error('Invalid token or coinType');
-        }
 
         if (isSendAll) {
           this.emit(
             'sendMaxAmount',
             calcData.amount
-              .dividedBy(new BigNumber(token.multiplier))
+              .dividedBy(new BigNumber(coin.multiplier))
               .toString(10)
           );
         }
