@@ -749,7 +749,6 @@ export class TransactionSender extends CyFlow {
         }
 
         metaData = await wallet.generateMetaData(
-          feeRate,
           contractAddress,
           contractAbbr
         );
