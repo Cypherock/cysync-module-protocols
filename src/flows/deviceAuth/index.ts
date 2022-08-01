@@ -170,15 +170,12 @@ export class DeviceAuthenticator extends CyFlow {
       }
     });
 
-    if (requestAcceptedState === 1) {
-      requestAcceptedState = 2;
-      this.emit('confirmed', true);
-    }
-
     if (data.commandType === 83) {
       this.emit('confirmed', false);
       throw new ExitFlowError();
     }
+
+    this.emit('confirmed', true);
 
     let serial;
     let serialSignature;
