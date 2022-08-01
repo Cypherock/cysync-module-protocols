@@ -748,11 +748,7 @@ export class TransactionSender extends CyFlow {
           feeRate = Math.round(res.data / 1000000000);
         }
 
-        metaData = await wallet.generateMetaData(
-          feeRate,
-          contractAddress,
-          contractAbbr
-        );
+        metaData = await wallet.generateMetaData(contractAddress, contractAbbr);
 
         let amount: BigNumber;
         let txFee: BigNumber;
