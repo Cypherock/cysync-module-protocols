@@ -743,9 +743,9 @@ export class TransactionSender extends CyFlow {
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
           const res = await Server.eth.transaction
-            .getFees({ network })
+            .getFees({ network, responseType: 'v2' })
             .request();
-          feeRate = Math.round(res.data / 1000000000);
+          feeRate = Math.round(res.data.fees / 1000000000);
         }
 
         metaData = await wallet.generateMetaData(contractAddress, contractAbbr);
@@ -939,9 +939,9 @@ export class TransactionSender extends CyFlow {
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
           const res = await Server.eth.transaction
-            .getFees({ network })
+            .getFees({ network, responseType: 'v2' })
             .request();
-          feeRate = Math.round(res.data / 1000000000);
+          feeRate = Math.round(res.data.fees / 1000000000);
         }
 
         const calcData = await wallet.approximateTxnFee(
