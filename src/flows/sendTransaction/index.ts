@@ -781,17 +781,6 @@ export class TransactionSender extends CyFlow {
           newAccountId ? true : false
         );
         const { network } = coin;
-        const txnData = newAccountId
-          ? await wallet.generateCreateAccountTransaction(
-              newAccountId,
-              customAccount
-            )
-          : await wallet.generateUnsignedTransaction(
-              outputList[0].address,
-              outputList[0].value,
-              customAccount
-            );
-        ({ txn: unsignedTransaction, inputs, outputs } = txnData);
         if (fee) {
           feeRate = fee;
         } else {
@@ -803,6 +792,19 @@ export class TransactionSender extends CyFlow {
         }
 
         totalFees = feeRate / 10 ** coin.decimal;
+        const txnData = newAccountId
+          ? await wallet.generateCreateAccountTransaction(
+              newAccountId,
+              customAccount
+            )
+          : await wallet.generateUnsignedTransaction(
+              outputList[0].address,
+              outputList[0].value,
+              isSendAll,
+              new BigNumber(feeRate),
+              customAccount
+            );
+        ({ txn: unsignedTransaction, inputs, outputs } = txnData);
       } else {
         wallet = new BitcoinWallet({
           xpub,
