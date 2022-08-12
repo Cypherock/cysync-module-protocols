@@ -712,7 +712,7 @@ export class TransactionSender extends CyFlow {
       let metaData = '';
       let feeRate;
       let wallet: BitcoinWallet | EthereumWallet | NearWallet;
-      let totalFees: number;
+      let totalFees: string;
       let txnInfo: any;
       let inputs: any[];
       let outputs: any[];
@@ -773,7 +773,7 @@ export class TransactionSender extends CyFlow {
           .dividedBy(new BigNumber(token.multiplier))
           .toString();
 
-        totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toNumber();
+        totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toString();
       } else if (coin instanceof NearCoinData) {
         wallet = new NearWallet(xpub, coin);
         metaData = await wallet.generateMetaData(
@@ -791,7 +791,9 @@ export class TransactionSender extends CyFlow {
           feeRate = res.data;
         }
 
-        totalFees = feeRate / 10 ** coin.decimal;
+        totalFees = new BigNumber(feeRate)
+          .dividedBy(10 ** coin.decimal)
+          .toString();
         const txnData = newAccountId
           ? await wallet.generateCreateAccountTransaction(
               newAccountId,
@@ -840,7 +842,9 @@ export class TransactionSender extends CyFlow {
           isSendAll
         );
 
-        totalFees = Number(txnData.fee) / coin.multiplier;
+        totalFees = new BigNumber(txnData.fee)
+          .dividedBy(coin.multiplier)
+          .toString();
         ({ inputs, outputs } = txnData);
 
         unsignedTransaction = txnData.txn;
