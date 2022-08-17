@@ -414,8 +414,6 @@ export class TransactionReceiver extends CyFlow {
 
       await Promise.race([waitForUserPromise(), waitForAbort()]);
 
-      console.log('should not print');
-
       sequenceNumber = connection.getNewSequenceNumber();
       await connection.sendCommand({
         commandType: 96,
