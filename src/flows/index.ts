@@ -140,6 +140,7 @@ export abstract class CyFlow extends EventEmitter {
         }
         const packetVersion = connection.getPacketVersion();
         if (packetVersion === PacketVersionMap.v3) {
+          logger.info('Sending abort from cancel');
           const sequenceNumber = connection.getNewSequenceNumber();
           connection
             .sendAbort({ sequenceNumber })

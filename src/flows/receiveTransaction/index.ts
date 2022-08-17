@@ -1,6 +1,9 @@
 import {
   CoinGroup,
   COINS,
+  DeviceError,
+  DeviceErrorType,
+  DeviceIdleState,
   EthCoinData,
   NearCoinData,
   PacketVersionMap,
@@ -10,7 +13,7 @@ import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
 import { commandHandler76 } from '../../handlers';
-import { logger } from '../../utils';
+import { logger, sleep } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
@@ -277,6 +280,23 @@ export class TransactionReceiver extends CyFlow {
       derivingAddressCmdStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_DERIVE_ADD_NEAR;
     }
+
+    let stopWaitForAbort = false;
+
+    const waitForAbort = async () => {
+      let status = await connection.getStatus();
+      // This will pollute logs with repeated status messages.
+      // TODO: Find a way to do this while keeping the logs clean.
+      while (status.deviceIdleState !== DeviceIdleState.IDLE) {
+        if (stopWaitForAbort) return;
+        status = await connection.getStatus();
+      }
+      console.log('Device idle');
+      //sleep for 5 seconds
+      await sleep(5000);
+      throw new DeviceError(DeviceErrorType.DEVICE_ABORT);
+    };
+
     const onStatus = (status: StatusData) => {
       if (
         status.flowStatus >= requestAcceptedCmdStatus &&
@@ -389,7 +409,15 @@ export class TransactionReceiver extends CyFlow {
       }
     } else if (addressVerified.commandType === 65 && isNear) {
       this.emit('cardTapped');
-      await userAction.promise;
+
+      const waitForUserPromise = async () => {
+        await userAction.promise;
+        stopWaitForAbort = true;
+      };
+
+      await Promise.race([waitForUserPromise(), waitForAbort()]);
+
+      console.log('should not print');
 
       sequenceNumber = connection.getNewSequenceNumber();
       await connection.sendCommand({
@@ -428,7 +456,14 @@ export class TransactionReceiver extends CyFlow {
         this.emit('addressVerified', customAccount);
         this.emit('replaceAccountRequired', true);
 
-        await replaceAccountAction.promise;
+        const waitForReplaceAccount = async () => {
+          await replaceAccountAction.promise;
+          stopWaitForAbort = true;
+        };
+
+        stopWaitForAbort = false;
+        await Promise.race([waitForReplaceAccount(), waitForAbort()]);
+
         sequenceNumber = connection.getNewSequenceNumber();
         await connection.sendCommand({
           commandType: 97,
