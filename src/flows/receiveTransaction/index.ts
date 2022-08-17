@@ -13,7 +13,7 @@ import { AddressDB } from '@cypherock/database';
 import newWallet from '@cypherock/wallet';
 
 import { commandHandler76 } from '../../handlers';
-import { logger, sleep } from '../../utils';
+import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
@@ -291,9 +291,6 @@ export class TransactionReceiver extends CyFlow {
         if (stopWaitForAbort) return;
         status = await connection.getStatus();
       }
-      console.log('Device idle');
-      //sleep for 5 seconds
-      await sleep(5000);
       throw new DeviceError(DeviceErrorType.DEVICE_ABORT);
     };
 
