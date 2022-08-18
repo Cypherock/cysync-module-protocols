@@ -285,12 +285,12 @@ export class TransactionReceiver extends CyFlow {
 
     const waitForAbort = async () => {
       let status = await connection.getStatus();
-      // This will pollute logs with repeated status messages.
-      // TODO: Find a way to do this while keeping the logs clean.
+      logger.info('Starting status polling', { status });
       while (status.deviceIdleState !== DeviceIdleState.IDLE) {
         if (stopWaitForAbort) return;
-        status = await connection.getStatus();
+        status = await connection.getStatus({ logsDisabled: true });
       }
+      logger.info('Ended status polling', { status });
       throw new DeviceError(DeviceErrorType.DEVICE_ABORT);
     };
 
