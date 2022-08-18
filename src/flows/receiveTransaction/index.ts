@@ -1,6 +1,9 @@
 import {
   CoinGroup,
   COINS,
+  DeviceError,
+  DeviceErrorType,
+  DeviceIdleState,
   EthCoinData,
   NearCoinData,
   PacketVersionMap,
@@ -277,6 +280,20 @@ export class TransactionReceiver extends CyFlow {
       derivingAddressCmdStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_DERIVE_ADD_NEAR;
     }
+
+    let stopWaitForAbort = false;
+
+    const waitForAbort = async () => {
+      let status = await connection.getStatus();
+      logger.info('Starting status polling', { status });
+      while (status.deviceIdleState !== DeviceIdleState.IDLE) {
+        if (stopWaitForAbort) return;
+        status = await connection.getStatus({ logsDisabled: true });
+      }
+      logger.info('Ended status polling', { status });
+      throw new DeviceError(DeviceErrorType.DEVICE_ABORT);
+    };
+
     const onStatus = (status: StatusData) => {
       if (
         status.flowStatus >= requestAcceptedCmdStatus &&
@@ -389,7 +406,13 @@ export class TransactionReceiver extends CyFlow {
       }
     } else if (addressVerified.commandType === 65 && isNear) {
       this.emit('cardTapped');
-      await userAction.promise;
+
+      const waitForUserPromise = async () => {
+        await userAction.promise;
+        stopWaitForAbort = true;
+      };
+
+      await Promise.race([waitForUserPromise(), waitForAbort()]);
 
       sequenceNumber = connection.getNewSequenceNumber();
       await connection.sendCommand({
@@ -428,7 +451,14 @@ export class TransactionReceiver extends CyFlow {
         this.emit('addressVerified', customAccount);
         this.emit('replaceAccountRequired', true);
 
-        await replaceAccountAction.promise;
+        const waitForReplaceAccount = async () => {
+          await replaceAccountAction.promise;
+          stopWaitForAbort = true;
+        };
+
+        stopWaitForAbort = false;
+        await Promise.race([waitForReplaceAccount(), waitForAbort()]);
+
         sequenceNumber = connection.getNewSequenceNumber();
         await connection.sendCommand({
           commandType: 97,
