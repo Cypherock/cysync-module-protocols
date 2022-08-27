@@ -45,7 +45,7 @@ export const formatCoinsForDB = async (
       xpub: accountXpub,
       zpub: accountZpub,
       price: 0,
-      priceLastUpdatedAt: 0
+      priceLastUpdatedAt: undefined
     };
     coins.push(coin);
   }
