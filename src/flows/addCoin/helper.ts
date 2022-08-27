@@ -44,7 +44,8 @@ export const formatCoinsForDB = async (
       walletId,
       xpub: accountXpub,
       zpub: accountZpub,
-      price: 0
+      price: 0,
+      priceLastUpdatedAt: undefined
     };
     coins.push(coin);
   }
