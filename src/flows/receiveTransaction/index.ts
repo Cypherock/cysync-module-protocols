@@ -5,7 +5,6 @@ import {
   DeviceErrorType,
   DeviceIdleState,
   EthCoinData,
-  getFeatureNameFromSdkVersion,
   NearCoinData,
   PacketVersionMap,
   StatusData
@@ -523,7 +522,7 @@ export class TransactionReceiver extends CyFlow {
         //To make the first x in lowercase
         receiveAddress = '0x' + receiveAddress.slice(2);
         receiveAddressPath = await wallet.getDerivationPath(
-          getFeatureNameFromSdkVersion(sdkVersion),
+          sdkVersion,
           contractAbbr
         );
       } else if (coin instanceof NearCoinData && customAccount) {
@@ -537,7 +536,7 @@ export class TransactionReceiver extends CyFlow {
         receiveAddress = customAccount;
         receiveAddressPath = await wallet.getDerivationPathForCustomAccount(
           customAccount,
-          getFeatureNameFromSdkVersion(sdkVersion)
+          sdkVersion
         );
       } else {
         wallet = newWallet({
@@ -549,7 +548,7 @@ export class TransactionReceiver extends CyFlow {
         });
         receiveAddress = await wallet.newReceiveAddress();
         receiveAddressPath = await wallet.getDerivationPath(
-          getFeatureNameFromSdkVersion(sdkVersion),
+          sdkVersion,
           receiveAddress
         );
       }

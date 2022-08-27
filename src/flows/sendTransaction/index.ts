@@ -2,7 +2,6 @@ import {
   CoinGroup,
   COINS,
   EthCoinData,
-  getFeatureNameFromSdkVersion,
   NearCoinData,
   PacketVersionMap,
   StatusData
@@ -751,7 +750,7 @@ export class TransactionSender extends CyFlow {
         }
 
         metaData = await wallet.generateMetaData(
-          getFeatureNameFromSdkVersion(sdkVersion),
+          sdkVersion,
           contractAddress,
           contractAbbr
         );
@@ -784,7 +783,7 @@ export class TransactionSender extends CyFlow {
         wallet = new NearWallet(xpub, coin);
         metaData = await wallet.generateMetaData(
           fee,
-          getFeatureNameFromSdkVersion(sdkVersion),
+          sdkVersion,
           newAccountId ? true : false
         );
         const { network } = coin;
@@ -838,7 +837,7 @@ export class TransactionSender extends CyFlow {
         const tempValue = await wallet.generateMetaData(
           outputList,
           feeRate,
-          getFeatureNameFromSdkVersion(sdkVersion),
+          sdkVersion,
           isSendAll
         );
         metaData = tempValue.metaData;
