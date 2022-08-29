@@ -487,6 +487,7 @@ export class TransactionReceiver extends CyFlow {
   async run(params: TransactionReceiverRunOptions) {
     const {
       connection,
+      sdkVersion,
       addressDB,
       walletId,
       coinType,
@@ -520,7 +521,10 @@ export class TransactionReceiver extends CyFlow {
         receiveAddress = wallet.newReceiveAddress().toUpperCase();
         //To make the first x in lowercase
         receiveAddress = '0x' + receiveAddress.slice(2);
-        receiveAddressPath = await wallet.getDerivationPath(contractAbbr);
+        receiveAddressPath = await wallet.getDerivationPath(
+          sdkVersion,
+          contractAbbr
+        );
       } else if (coin instanceof NearCoinData && customAccount) {
         wallet = newWallet({
           coinType,
@@ -531,7 +535,8 @@ export class TransactionReceiver extends CyFlow {
         });
         receiveAddress = customAccount;
         receiveAddressPath = await wallet.getDerivationPathForCustomAccount(
-          customAccount
+          customAccount,
+          sdkVersion
         );
       } else {
         wallet = newWallet({
@@ -542,7 +547,10 @@ export class TransactionReceiver extends CyFlow {
           addressDB
         });
         receiveAddress = await wallet.newReceiveAddress();
-        receiveAddressPath = await wallet.getDerivationPath(receiveAddress);
+        receiveAddressPath = await wallet.getDerivationPath(
+          sdkVersion,
+          receiveAddress
+        );
       }
 
       await this.onStart(connection);

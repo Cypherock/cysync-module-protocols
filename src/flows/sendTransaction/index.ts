@@ -688,6 +688,7 @@ export class TransactionSender extends CyFlow {
   async run(params: TransactionSenderRunOptions) {
     const {
       connection,
+      sdkVersion,
       addressDB,
       transactionDB,
       walletId,
@@ -748,7 +749,11 @@ export class TransactionSender extends CyFlow {
           feeRate = Math.round(res.data.fees / 1000000000);
         }
 
-        metaData = await wallet.generateMetaData(contractAddress, contractAbbr);
+        metaData = await wallet.generateMetaData(
+          sdkVersion,
+          contractAddress,
+          contractAbbr
+        );
 
         let amount: BigNumber;
         let txFee: BigNumber;
@@ -778,6 +783,7 @@ export class TransactionSender extends CyFlow {
         wallet = new NearWallet(xpub, coin);
         metaData = await wallet.generateMetaData(
           fee,
+          sdkVersion,
           newAccountId ? true : false
         );
         const { network } = coin;
@@ -831,6 +837,7 @@ export class TransactionSender extends CyFlow {
         const tempValue = await wallet.generateMetaData(
           outputList,
           feeRate,
+          sdkVersion,
           isSendAll
         );
         metaData = tempValue.metaData;
