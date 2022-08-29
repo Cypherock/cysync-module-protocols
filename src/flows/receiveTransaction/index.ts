@@ -251,9 +251,9 @@ export class TransactionReceiver extends CyFlow {
     let requestAcceptedCmdStatus: number =
       RECEIVE_TRANSACTION_STATUS.RECV_TXN_FIND_XPUB;
     let passphraseEnteredCmdStatus: number =
-      RECEIVE_TRANSACTION_STATUS.RECV_TXN_CONFIRM_PASSPHRASE;
-    let pinEnteredCmdStatus: number =
       RECEIVE_TRANSACTION_STATUS.RECV_TXN_ENTER_PIN;
+    let pinEnteredCmdStatus: number =
+      RECEIVE_TRANSACTION_STATUS.RECV_TXN_TAP_CARD_SEND_CMD;
     let cardTapCmdStatus: number =
       RECEIVE_TRANSACTION_STATUS.RECV_TXN_TAP_CARD_SEND_CMD;
     let derivingAddressCmdStatus: number =
@@ -263,18 +263,18 @@ export class TransactionReceiver extends CyFlow {
       requestAcceptedCmdStatus =
         RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_FIND_XPUB_ETH;
       passphraseEnteredCmdStatus =
-        RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_CONFIRM_PASSPHRASE_ETH;
-      pinEnteredCmdStatus =
         RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_CHECK_PIN_ETH;
+      pinEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_TAP_CARD_SEND_CMD_ETH;
       cardTapCmdStatus =
         RECEIVE_TRANSACTION_STATUS_ETH.RECV_TXN_TAP_CARD_SEND_CMD_ETH;
     } else if (isNear) {
       requestAcceptedCmdStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_FIND_XPUB_NEAR;
       passphraseEnteredCmdStatus =
-        RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_CONFIRM_PASSPHRASE_NEAR;
-      pinEnteredCmdStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_CHECK_PIN_NEAR;
+      pinEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_TAP_CARD_SEND_CMD_NEAR;
       cardTapCmdStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_TAP_CARD_SEND_CMD_NEAR;
       derivingAddressCmdStatus =
