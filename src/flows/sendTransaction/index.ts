@@ -792,9 +792,9 @@ export class TransactionSender extends CyFlow {
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
           const res = await Server.near.transaction
-            .getFees({ network })
+            .getFees({ network, responseType: 'v2' })
             .request();
-          feeRate = res.data;
+          feeRate = res.data.fees;
         }
 
         totalFees = new BigNumber(feeRate)
@@ -994,9 +994,9 @@ export class TransactionSender extends CyFlow {
         } else {
           logger.info(`Fetching optimal fees from the internet for near.`);
           const res = await Server.near.transaction
-            .getFees({ network })
+            .getFees({ network, responseType: 'v2' })
             .request();
-          feeRate = Math.round(res);
+          feeRate = res.data.fees;
         }
 
         const calcData = await wallet.approximateTxnFee(
