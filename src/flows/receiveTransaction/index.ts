@@ -408,7 +408,7 @@ export class TransactionReceiver extends CyFlow {
       this.emit('cardTapped');
 
       const waitForUserPromise = async () => {
-        await userAction.current.promise;
+        await userAction.promise;
         stopWaitForAbort = true;
       };
 
@@ -452,7 +452,7 @@ export class TransactionReceiver extends CyFlow {
         this.emit('replaceAccountRequired', true);
 
         const waitForReplaceAccount = async () => {
-          await replaceAccountAction.current.promise;
+          await replaceAccountAction.promise;
           stopWaitForAbort = true;
         };
 
