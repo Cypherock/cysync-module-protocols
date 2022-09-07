@@ -86,7 +86,6 @@ enum RECEIVE_TRANSACTION_STATUS_NEAR {
   RECV_TXN_WAIT_FOR_REPLACE_NEAR,
   RECV_TXN_SELECT_REPLACE_ACC_NEAR,
   RECV_TXN_VERIFY_SAVE_ACC_NEAR,
-  RECV_TXN_WAITING_SCREEN_NEAR,
   RECV_TXN_FINAL_SCREEN_NEAR
 }
 
@@ -242,6 +241,7 @@ export class TransactionReceiver extends CyFlow {
     let pinEnteredState = 0;
     let cardTapState = 0;
     let nearAccountDerivingState = 0;
+    let nearReplaceAccountSelectedState = 0;
 
     this.emit('receiveAddress', receiveAddress);
 
@@ -258,6 +258,7 @@ export class TransactionReceiver extends CyFlow {
       RECEIVE_TRANSACTION_STATUS.RECV_TXN_TAP_CARD_SEND_CMD;
     let derivingAddressCmdStatus: number =
       RECEIVE_TRANSACTION_STATUS.RECV_TXN_DERIVE_ADD_SCREEN;
+    let nearReplaceAccountSelectedStatus = 0;
 
     if (isEth) {
       requestAcceptedCmdStatus =
@@ -279,6 +280,8 @@ export class TransactionReceiver extends CyFlow {
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_TAP_CARD_SEND_CMD_NEAR;
       derivingAddressCmdStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_DERIVE_ADD_NEAR;
+      nearReplaceAccountSelectedStatus =
+        RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_VERIFY_SAVE_ACC_NEAR;
     }
 
     let stopWaitForAbort = false;
@@ -468,7 +471,28 @@ export class TransactionReceiver extends CyFlow {
         const verifiedReplaceAccount = await connection.waitForCommandOutput({
           sequenceNumber,
           expectedCommandTypes: [97],
-          onStatus: () => {}
+          onStatus: (status: StatusData) => {
+            if (
+              status.flowStatus >= nearReplaceAccountSelectedStatus &&
+              nearReplaceAccountSelectedState === 0
+            ) {
+              nearReplaceAccountSelectedState = 1;
+            }
+            if (
+              status.flowStatus < nearReplaceAccountSelectedStatus &&
+              nearReplaceAccountSelectedState === 2
+            ) {
+              nearReplaceAccountSelectedState = 3;
+            }
+            if (nearReplaceAccountSelectedState === 1) {
+              nearReplaceAccountSelectedState = 2;
+              this.emit('replaceAccountSelected', true);
+            }
+            if (nearReplaceAccountSelectedState === 3) {
+              nearReplaceAccountSelectedState = 0;
+              this.emit('replaceAccountSelected', false);
+            }
+          }
         });
         if (verifiedReplaceAccount.data.startsWith('01')) {
           this.emit('replaceAccountVerified', true);
