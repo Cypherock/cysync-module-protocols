@@ -23,6 +23,8 @@
     "winston": "^3.5.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^17.1.2",
+    "@commitlint/config-conventional": "^17.1.0",
     "@types/bignumber.js": "^5.0.0",
     "@types/mocha": "^9.1.0",
     "@types/nedb": "^1.8.12",
