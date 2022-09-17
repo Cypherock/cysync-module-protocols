@@ -542,9 +542,7 @@ export class TransactionReceiver extends CyFlow {
           zpub,
           addressDB
         });
-        receiveAddress = wallet.newReceiveAddress().toUpperCase();
-        //To make the first x in lowercase
-        receiveAddress = '0x' + receiveAddress.slice(2);
+        receiveAddress = wallet.newReceiveAddress().toLowerCase();
         receiveAddressPath = await wallet.getDerivationPath(
           sdkVersion,
           contractAbbr
