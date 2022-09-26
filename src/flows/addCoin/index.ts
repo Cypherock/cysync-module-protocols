@@ -167,7 +167,7 @@ export class CoinAdder extends CyFlow {
 
     const data = await connection.waitForCommandOutput({
       sequenceNumber,
-      expectedCommandTypes: [46, 49, 75, 76, 71, 81],
+      expectedCommandTypes: [46, 49, 75, 76, 71, 81, 79, 91],
       onStatus: status => {
         if (
           status.flowStatus > ADD_COINS_TASKS.ADD_COINS_VERIFY &&
@@ -230,7 +230,7 @@ export class CoinAdder extends CyFlow {
       commandHandler76(data, this);
     }
 
-    if (data.commandType === 46) {
+    if ([79, 91, 46].includes(data.commandType)) {
       this.emit('coinsConfirmed', false);
       throw new ExitFlowError();
     }

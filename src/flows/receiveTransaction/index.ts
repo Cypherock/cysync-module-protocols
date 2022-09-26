@@ -344,7 +344,7 @@ export class TransactionReceiver extends CyFlow {
 
     const addressVerified = await connection.waitForCommandOutput({
       sequenceNumber,
-      expectedCommandTypes: [75, 76, 64, 65, 63, 71, 81],
+      expectedCommandTypes: [75, 76, 64, 65, 63, 71, 81, 91, 79],
       onStatus: status => {
         onStatus(status);
         // receive 65 before this status is handled for custom account exists case
@@ -370,7 +370,7 @@ export class TransactionReceiver extends CyFlow {
       commandHandler76(addressVerified, this);
     }
 
-    if (addressVerified.commandType === 63) {
+    if ([79, 91, 63].includes(addressVerified.commandType)) {
       this.emit('coinsConfirmed', false);
       throw new ExitFlowError();
     }
