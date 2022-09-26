@@ -587,14 +587,15 @@ export class TransactionSender extends CyFlow {
 
       const signedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        expectedCommandTypes: [54, 79, 81, 71, 53],
+        expectedCommandTypes: [54, 79, 81, 71, 53, 91],
         onStatus
       });
 
-      if (signedTxn.commandType === 79 || signedTxn.commandType === 53) {
+      if ([79, 91, 53].includes(signedTxn.commandType)) {
         this.emit('coinsConfirmed', false);
         throw new ExitFlowError();
       }
+
       if (signedTxn.commandType === 81) {
         this.emit('noWalletOnCard');
         throw new ExitFlowError();
