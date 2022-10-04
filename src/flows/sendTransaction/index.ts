@@ -1,14 +1,21 @@
 import {
+  BtcCoinData,
   CoinGroup,
   COINS,
   EthCoinData,
   NearCoinData,
   PacketVersionMap,
+  SolanaCoinData,
   StatusData
 } from '@cypherock/communication';
 import { AddressDB, TransactionDB } from '@cypherock/database';
 import Server from '@cypherock/server-wrapper';
-import { BitcoinWallet, EthereumWallet, NearWallet } from '@cypherock/wallet';
+import {
+  BitcoinWallet,
+  EthereumWallet,
+  NearWallet,
+  SolanaWallet
+} from '@cypherock/wallet';
 import BigNumber from 'bignumber.js';
 
 import { commandHandler76 } from '../../handlers';
@@ -40,7 +47,7 @@ interface RunParams extends TransactionSenderRunOptions {
   metaData: string;
   unsignedTransaction: string;
   utxoList: string[];
-  wallet: BitcoinWallet | EthereumWallet | NearWallet;
+  wallet: BitcoinWallet | EthereumWallet | NearWallet | SolanaWallet;
   txnInfo: any;
   inputs: any[];
 }
@@ -113,6 +120,29 @@ enum SEND_TRANSACTION_STATUS_NEAR {
   SEND_TXN_FINAL_SCREEN_NEAR
 }
 
+enum SEND_TRANSACTION_STATUS_SOLANA {
+  SEND_TXN_VERIFY_COIN_SOLANA = 1,
+  SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN_SOLANA,
+  SEND_TXN_UNSIGNED_TXN_RECEIVED_SOLANA,
+  SEND_TXN_VERIFY_CONTRACT_ADDRESS_SOLANA,
+  SEND_TXN_VERIFY_TXN_NONCE_SOLANA,
+  SEND_TXN_VERIFY_RECEIPT_ADDRESS_SOLANA,
+  SEND_TXN_CALCULATE_AMOUNT_SOLANA,
+  SEND_TXN_VERIFY_RECEIPT_AMOUNT_SOLANA,
+  SEND_TXN_VERIFY_RECEIPT_FEES_SOLANA,
+  SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_SOLANA,
+  SEND_TXN_ENTER_PASSPHRASE_SOLANA,
+  SEND_TXN_CONFIRM_PASSPHRASE_SOLANA,
+  SEND_TXN_CHECK_PIN_SOLANA,
+  SEND_TXN_ENTER_PIN_SOLANA,
+  SEND_TXN_TAP_CARD_SOLANA,
+  SEND_TXN_TAP_CARD_SEND_CMD_SOLANA,
+  SEND_TXN_READ_DEVICE_SHARE_SOLANA,
+  SEND_TXN_SIGN_TXN_SOLANA,
+  SEND_TXN_WAITING_SCREEN_SOLANA,
+  SEND_TXN_FINAL_SCREEN_SOLANA
+}
+
 export class TransactionSender extends CyFlow {
   constructor() {
     super();
@@ -131,6 +161,9 @@ export class TransactionSender extends CyFlow {
     txnInfo,
     inputs
   }: RunParams) {
+    if (wallet instanceof SolanaWallet)
+      throw new Error(`Invalid wallet for ${coinType}`);
+
     const coin = COINS[coinType];
 
     if (!coin) {
@@ -353,6 +386,7 @@ export class TransactionSender extends CyFlow {
 
     const isEth = [CoinGroup.Ethereum, CoinGroup.Ethereum].includes(coin.group);
     const isNear = [CoinGroup.Near].includes(coin.group);
+    const isSolana = [CoinGroup.Solana].includes(coin.group);
 
     let requestAcceptedState = 0;
     let recipientVerifiedState = 0;
@@ -392,6 +426,17 @@ export class TransactionSender extends CyFlow {
         SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_ENTER_PIN_NEAR;
       cardTapCmdStatus =
         SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_TAP_CARD_SEND_CMD_NEAR;
+    } else if (isSolana) {
+      requestAcceptedCmdStatus =
+        SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_VERIFY_COIN_SOLANA;
+      recipientVerifiedCmdStatus =
+        SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_SOLANA;
+      passphraseEnteredCmdStatus =
+        SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_CONFIRM_PASSPHRASE_SOLANA;
+      pinEnteredCmdStatus =
+        SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_ENTER_PIN_SOLANA;
+      cardTapCmdStatus =
+        SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_TAP_CARD_SEND_CMD_SOLANA;
     }
 
     const onStatus = (status: StatusData) => {
@@ -500,7 +545,7 @@ export class TransactionSender extends CyFlow {
       sequenceNumber
     });
 
-    if (!(coin instanceof EthCoinData) && !(coin instanceof NearCoinData)) {
+    if (coin instanceof BtcCoinData) {
       const utxoRequest = await connection.waitForCommandOutput({
         sequenceNumber,
         expectedCommandTypes: [51],
@@ -630,6 +675,56 @@ export class TransactionSender extends CyFlow {
 
       logger.info('Signed txn', { signedTxnNear });
       this.emit('signedTxn', signedTxnNear);
+    } else if (wallet instanceof SolanaWallet) {
+      if (!(coin instanceof SolanaCoinData)) {
+        throw new Error('Solana Wallet found, but coin is not Solana.');
+      }
+
+      const signedTxn = await connection.waitForCommandOutput({
+        sequenceNumber,
+        expectedCommandTypes: [54, 79, 81, 71, 53, 91],
+        onStatus
+      });
+
+      if ([79, 91, 53].includes(signedTxn.commandType)) {
+        this.emit('coinsConfirmed', false);
+        throw new ExitFlowError();
+      }
+
+      if (signedTxn.commandType === 81) {
+        this.emit('noWalletOnCard');
+        throw new ExitFlowError();
+      }
+      if (signedTxn.commandType === 71) {
+        this.emit('cardError');
+        throw new ExitFlowError();
+      }
+
+      sequenceNumber = connection.getNewSequenceNumber();
+      await connection.sendCommand({
+        commandType: 42,
+        data: '01',
+        sequenceNumber
+      });
+
+      const signedTxnSolana = wallet.getSignedTransaction(
+        unsignedTransaction,
+        signedTxn.data
+      );
+
+      try {
+        const isVerified = await wallet.verifySignedTxn(signedTxnSolana);
+        this.emit('signatureVerify', { isVerified, index: 0 });
+      } catch (error) {
+        this.emit('signatureVerify', {
+          isVerified: false,
+          index: -1,
+          error
+        });
+      }
+
+      logger.info('Signed txn', { signedTxnSolana });
+      this.emit('signedTxn', signedTxnSolana);
     } else {
       const inputSignatures: string[] = [];
       for (const _ of txnInfo.inputs) {
@@ -713,7 +808,7 @@ export class TransactionSender extends CyFlow {
       let unsignedTransaction = '';
       let metaData = '';
       let feeRate;
-      let wallet: BitcoinWallet | EthereumWallet | NearWallet;
+      let wallet: BitcoinWallet | EthereumWallet | NearWallet | SolanaWallet;
       let totalFees: string;
       let txnInfo: any;
       let inputs: any[];
@@ -813,6 +908,30 @@ export class TransactionSender extends CyFlow {
               new BigNumber(feeRate),
               customAccount
             );
+        ({ txn: unsignedTransaction, inputs, outputs } = txnData);
+      } else if (coin instanceof SolanaCoinData) {
+        wallet = new SolanaWallet(xpub, coin);
+        metaData = await wallet.generateMetaData(fee);
+        const { network } = coin;
+        if (fee) {
+          feeRate = fee;
+        } else {
+          logger.info(`Fetching optimal fees from the internet.`);
+          const res = await Server.solana.transaction
+            .getFees({ network })
+            .request();
+          feeRate = res.data.fees;
+        }
+
+        totalFees = new BigNumber(feeRate)
+          .dividedBy(10 ** coin.decimal)
+          .toString();
+        const txnData = await wallet.generateUnsignedTransaction(
+          outputList[0].address,
+          outputList[0].value,
+          isSendAll,
+          new BigNumber(feeRate)
+        );
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
       } else {
         wallet = new BitcoinWallet({
@@ -1005,6 +1124,38 @@ export class TransactionSender extends CyFlow {
           feeRate,
           isSendAll,
           customAccount
+        );
+        totalFees = calcData.fees
+          .dividedBy(new BigNumber(coin.multiplier))
+          .toString(10);
+
+        if (isSendAll) {
+          this.emit(
+            'sendMaxAmount',
+            calcData.amount
+              .dividedBy(new BigNumber(coin.multiplier))
+              .toString(10)
+          );
+        }
+      } else if (coin instanceof SolanaCoinData) {
+        const { network } = coin;
+
+        const wallet = new SolanaWallet(xpub, coin);
+
+        if (fee) {
+          feeRate = fee;
+        } else {
+          logger.info(`Fetching optimal fees from the internet for solana.`);
+          const res = await Server.solana.transaction
+            .getFees({ network })
+            .request();
+          feeRate = res.data.fees;
+        }
+
+        const calcData = await wallet.approximateTxnFee(
+          outputList[0].value,
+          feeRate,
+          isSendAll
         );
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
