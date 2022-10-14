@@ -1,1 +1,0 @@
-![sendTransaction.png](./sendTransaction.png)
