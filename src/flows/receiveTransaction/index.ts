@@ -7,6 +7,7 @@ import {
   EthCoinData,
   NearCoinData,
   PacketVersionMap,
+  SolanaCoinData,
   StatusData
 } from '@cypherock/communication';
 import { AddressDB } from '@cypherock/database';
@@ -84,6 +85,20 @@ enum RECEIVE_TRANSACTION_STATUS_NEAR {
   RECV_TXN_SELECT_REPLACE_ACC_NEAR,
   RECV_TXN_VERIFY_SAVE_ACC_NEAR,
   RECV_TXN_FINAL_SCREEN_NEAR
+}
+
+enum RECEIVE_TRANSACTION_STATUS_SOLANA {
+  RECV_TXN_FIND_XPUB_SOLANA = 1,
+  RECV_TXN_ENTER_PASSPHRASE_SOLANA,
+  RECV_TXN_CONFIRM_PASSPHRASE_SOLANA,
+  RECV_TXN_ENTER_PIN_SOLANA,
+  RECV_TXN_CHECK_PIN_SOLANA,
+  RECV_TXN_TAP_CARD_SOLANA,
+  RECV_TXN_TAP_CARD_SEND_CMD_SOLANA,
+  RECV_TXN_READ_DEVICE_SHARE_SOLANA,
+  RECV_TXN_DERIVE_ADD_SCREEN_SOLANA,
+  RECV_TXN_DERIVE_ADD_SOLANA,
+  RECV_TXN_DISPLAY_ADDR_SOLANA
 }
 
 export class TransactionReceiver extends CyFlow {
@@ -244,6 +259,7 @@ export class TransactionReceiver extends CyFlow {
 
     const isEth = [CoinGroup.Ethereum, CoinGroup.Ethereum].includes(coin.group);
     const isNear = [CoinGroup.Near].includes(coin.group);
+    const isSolana = [CoinGroup.Solana].includes(coin.group);
 
     let requestAcceptedCmdStatus: number =
       RECEIVE_TRANSACTION_STATUS.RECV_TXN_FIND_XPUB;
@@ -279,6 +295,17 @@ export class TransactionReceiver extends CyFlow {
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_DERIVE_ADD_NEAR;
       nearReplaceAccountSelectedStatus =
         RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_VERIFY_SAVE_ACC_NEAR;
+    } else if (isSolana) {
+      requestAcceptedCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_SOLANA.RECV_TXN_FIND_XPUB_SOLANA;
+      passphraseEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_SOLANA.RECV_TXN_CHECK_PIN_SOLANA;
+      pinEnteredCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_SOLANA.RECV_TXN_TAP_CARD_SEND_CMD_SOLANA;
+      cardTapCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_SOLANA.RECV_TXN_TAP_CARD_SEND_CMD_SOLANA;
+      derivingAddressCmdStatus =
+        RECEIVE_TRANSACTION_STATUS_SOLANA.RECV_TXN_DERIVE_ADD_SOLANA;
     }
 
     let stopWaitForAbort = false;
@@ -393,6 +420,11 @@ export class TransactionReceiver extends CyFlow {
           address = `0x${addressHex.toLowerCase()}`;
         } else if (coin instanceof NearCoinData) {
           address = customAccount || addressHex;
+        } else if (coin instanceof SolanaCoinData) {
+          // Remove trailing null characters from address
+          address = Buffer.from(addressHex, 'hex')
+            .toString()
+            .replace(/^[\s\uFEFF\xA0\0]+|[\s\uFEFF\xA0\0]+$/g, '');
         } else {
           address = Buffer.from(addressHex, 'hex').toString().toLowerCase();
         }
