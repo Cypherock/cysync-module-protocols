@@ -13,6 +13,9 @@ export interface CardAuthenticatorRunOptions extends CyFlowRunOptions {
   firmwareVersion: string;
   cardNumber?: string;
   isTestApp?: boolean;
+  email?: string;
+  cysyncVersion?: string;
+  grouped: boolean;
 }
 
 enum VERIFY_CARD_FLOW {
@@ -36,7 +39,10 @@ export class CardAuthenticator extends CyFlow {
     connection,
     firmwareVersion,
     cardNumber = '00',
-    isTestApp = false
+    isTestApp = false,
+    email,
+    cysyncVersion,
+    grouped
   }: CardAuthenticatorRunOptions) {
     await connection.sendData(70, cardNumber);
 
@@ -101,7 +107,11 @@ export class CardAuthenticator extends CyFlow {
       serial,
       challengeSignature,
       challenge,
-      firmwareVersion
+      firmwareVersion,
+      email,
+      cysyncVersion,
+      cardNumber !== '4',
+      grouped
     );
     this.emit('verified', verified);
 
@@ -124,7 +134,10 @@ export class CardAuthenticator extends CyFlow {
     connection,
     firmwareVersion,
     cardNumber = '00',
-    isTestApp = false
+    isTestApp = false,
+    email,
+    cysyncVersion,
+    grouped
   }: CardAuthenticatorRunOptions) {
     let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
@@ -215,7 +228,11 @@ export class CardAuthenticator extends CyFlow {
       serial,
       challengeSignature,
       challenge,
-      firmwareVersion
+      firmwareVersion,
+      email,
+      cysyncVersion,
+      cardNumber !== '4',
+      grouped
     );
     this.emit('verified', verified);
 

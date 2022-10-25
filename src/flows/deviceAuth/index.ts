@@ -9,6 +9,8 @@ export interface DeviceAuthenticatorRunOptions extends CyFlowRunOptions {
   firmwareVersion: string;
   mockAuth?: boolean;
   inTestApp: boolean;
+  email?: string;
+  cysyncVersion?: string;
 }
 
 enum VERIFY_DEVICE_FLOW {
@@ -32,7 +34,9 @@ export class DeviceAuthenticator extends CyFlow {
     connection,
     mockAuth,
     firmwareVersion,
-    inTestApp
+    inTestApp,
+    email,
+    cysyncVersion
   }: DeviceAuthenticatorRunOptions) {
     await connection.sendData(83, '01');
     const data = await connection.receiveData([85, 83], 30000);
@@ -123,7 +127,9 @@ export class DeviceAuthenticator extends CyFlow {
         firmwareVersion,
         inTestApp,
         challengePostfix1,
-        challengePostfix2
+        challengePostfix2,
+        email,
+        cysyncVersion
       );
     }
 
@@ -140,7 +146,9 @@ export class DeviceAuthenticator extends CyFlow {
     connection,
     mockAuth,
     firmwareVersion,
-    inTestApp
+    inTestApp,
+    email,
+    cysyncVersion
   }: DeviceAuthenticatorRunOptions) {
     let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
@@ -270,7 +278,9 @@ export class DeviceAuthenticator extends CyFlow {
         firmwareVersion,
         inTestApp,
         challengePostfix1,
-        challengePostfix2
+        challengePostfix2,
+        email,
+        cysyncVersion
       );
     }
 
