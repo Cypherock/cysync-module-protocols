@@ -37,7 +37,7 @@ export const verifyChallengeSignature = async (
   email?: string,
   cysyncVersion?: string,
   onlyFailure?: boolean,
-  grouped?: boolean
+  sessionId?: string
 ) => {
   const res = await deviceServer
     .challenge({
@@ -48,11 +48,13 @@ export const verifyChallengeSignature = async (
       email,
       cysyncVersion,
       onlyFailure,
-      grouped
+      sessionId
     })
     .request();
 
   // Server replies false if not verified, and 'no device found' if there is no device with this serial number. and obviously true if verified.
-  if (res.data.verified !== true) return false;
-  return true;
+  return {
+    verified: res.data.verified === true,
+    sessionId: res.data.sessionId
+  };
 };
