@@ -115,9 +115,7 @@ enum SEND_TRANSACTION_STATUS_NEAR {
   SEND_TXN_TAP_CARD_NEAR,
   SEND_TXN_TAP_CARD_SEND_CMD_NEAR,
   SEND_TXN_READ_DEVICE_SHARE_NEAR,
-  SEND_TXN_SIGN_TXN_NEAR,
-  SEND_TXN_WAITING_SCREEN_NEAR,
-  SEND_TXN_FINAL_SCREEN_NEAR
+  SEND_TXN_SIGN_TXN_NEAR
 }
 
 enum SEND_TRANSACTION_STATUS_SOLANA {
@@ -398,9 +396,9 @@ export class TransactionSender extends CyFlow {
     let recipientVerifiedCmdStatus: number =
       SEND_TRANSACTION_STATUS.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD;
     let passphraseEnteredCmdStatus: number =
-      SEND_TRANSACTION_STATUS.SEND_TXN_CONFIRM_PASSPHRASE;
-    let pinEnteredCmdStatus: number =
       SEND_TRANSACTION_STATUS.SEND_TXN_ENTER_PIN;
+    let pinEnteredCmdStatus: number =
+      SEND_TRANSACTION_STATUS.SEND_TXN_TAP_CARD_SEND_CMD;
     let cardTapCmdStatus: number =
       SEND_TRANSACTION_STATUS.SEND_TXN_TAP_CARD_SEND_CMD;
 
@@ -410,8 +408,9 @@ export class TransactionSender extends CyFlow {
       recipientVerifiedCmdStatus =
         SEND_TRANSACTION_STATUS_ETH.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_ETH;
       passphraseEnteredCmdStatus =
-        SEND_TRANSACTION_STATUS_ETH.SEND_TXN_CONFIRM_PASSPHRASE_ETH;
-      pinEnteredCmdStatus = SEND_TRANSACTION_STATUS_ETH.SEND_TXN_ENTER_PIN_ETH;
+        SEND_TRANSACTION_STATUS_ETH.SEND_TXN_ENTER_PIN_ETH;
+      pinEnteredCmdStatus =
+        SEND_TRANSACTION_STATUS_ETH.SEND_TXN_TAP_CARD_SEND_CMD_ETH;
       cardTapCmdStatus =
         SEND_TRANSACTION_STATUS_ETH.SEND_TXN_TAP_CARD_SEND_CMD_ETH;
     } else if (isNear) {
@@ -420,9 +419,9 @@ export class TransactionSender extends CyFlow {
       recipientVerifiedCmdStatus =
         SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_NEAR;
       passphraseEnteredCmdStatus =
-        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_CONFIRM_PASSPHRASE_NEAR;
-      pinEnteredCmdStatus =
         SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_ENTER_PIN_NEAR;
+      pinEnteredCmdStatus =
+        SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_TAP_CARD_SEND_CMD_NEAR;
       cardTapCmdStatus =
         SEND_TRANSACTION_STATUS_NEAR.SEND_TXN_TAP_CARD_SEND_CMD_NEAR;
     } else if (isSolana) {
@@ -431,9 +430,9 @@ export class TransactionSender extends CyFlow {
       recipientVerifiedCmdStatus =
         SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_SOLANA;
       passphraseEnteredCmdStatus =
-        SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_CONFIRM_PASSPHRASE_SOLANA;
-      pinEnteredCmdStatus =
         SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_ENTER_PIN_SOLANA;
+      pinEnteredCmdStatus =
+        SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_TAP_CARD_SEND_CMD_SOLANA;
       cardTapCmdStatus =
         SEND_TRANSACTION_STATUS_SOLANA.SEND_TXN_TAP_CARD_SEND_CMD_SOLANA;
     }
