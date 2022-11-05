@@ -67,10 +67,10 @@ export const createCoinIndexes = (selectedCoins: string[]) => {
     const coinIndex = coin.coinIndex;
     coinIndexList.push(coinIndex);
 
-    let chainIndex = '00';
+    let chainIndex = '0000000000000000';
 
     if (coin instanceof EthCoinData) {
-      chainIndex = intToUintByte(coin.chain, 8);
+      chainIndex = intToUintByte(coin.chain, 64);
     }
 
     chainIndexList.push(chainIndex);
