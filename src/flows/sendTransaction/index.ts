@@ -681,7 +681,7 @@ export class TransactionSender extends CyFlow {
 
       const preSignedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        expectedCommandTypes: [79, 81, 71, 53, 91, 92],
+        expectedCommandTypes: [79, 81, 71, 53, 91, 52],
         onStatus
       });
 
@@ -698,6 +698,7 @@ export class TransactionSender extends CyFlow {
         this.emit('cardError');
         throw new ExitFlowError();
       }
+
       const latestBlockhash = await wallet.getLatestBlockhashAsHex();
       sequenceNumber = connection.getNewSequenceNumber();
       await connection.sendCommand({
@@ -707,9 +708,14 @@ export class TransactionSender extends CyFlow {
       });
       const signedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        expectedCommandTypes: [54],
+        expectedCommandTypes: [54, 92],
         onStatus: () => {}
       });
+
+      if ([92].includes(signedTxn.commandType)) {
+        this.emit('coinsConfirmed', false);
+        throw new ExitFlowError();
+      }
 
       sequenceNumber = connection.getNewSequenceNumber();
       await connection.sendCommand({
