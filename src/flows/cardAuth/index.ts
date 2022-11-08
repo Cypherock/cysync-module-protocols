@@ -13,6 +13,10 @@ export interface CardAuthenticatorRunOptions extends CyFlowRunOptions {
   firmwareVersion: string;
   cardNumber?: string;
   isTestApp?: boolean;
+  email?: string;
+  cysyncVersion?: string;
+  grouped?: boolean;
+  sessionId?: string;
 }
 
 enum VERIFY_CARD_FLOW {
@@ -36,7 +40,11 @@ export class CardAuthenticator extends CyFlow {
     connection,
     firmwareVersion,
     cardNumber = '00',
-    isTestApp = false
+    isTestApp = false,
+    email,
+    cysyncVersion,
+    grouped,
+    sessionId
   }: CardAuthenticatorRunOptions) {
     await connection.sendData(70, cardNumber);
 
@@ -97,12 +105,18 @@ export class CardAuthenticator extends CyFlow {
       challengeHash: challengeHash.data
     });
 
-    const verified = await verifyChallengeSignature(
-      serial,
-      challengeSignature,
-      challenge,
-      firmwareVersion
-    );
+    const { verified, sessionId: newSessionId } =
+      await verifyChallengeSignature(
+        serial,
+        challengeSignature,
+        challenge,
+        firmwareVersion,
+        email,
+        cysyncVersion,
+        cardNumber !== '04' && grouped,
+        sessionId
+      );
+    if (newSessionId) this.emit('sessionId', newSessionId);
     this.emit('verified', verified);
 
     if (verified) {
@@ -124,7 +138,11 @@ export class CardAuthenticator extends CyFlow {
     connection,
     firmwareVersion,
     cardNumber = '00',
-    isTestApp = false
+    isTestApp = false,
+    email,
+    cysyncVersion,
+    grouped,
+    sessionId
   }: CardAuthenticatorRunOptions) {
     let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
@@ -211,12 +229,18 @@ export class CardAuthenticator extends CyFlow {
       challengeHash: challengeHash.data
     });
 
-    const verified = await verifyChallengeSignature(
-      serial,
-      challengeSignature,
-      challenge,
-      firmwareVersion
-    );
+    const { verified, sessionId: newSessionId } =
+      await verifyChallengeSignature(
+        serial,
+        challengeSignature,
+        challenge,
+        firmwareVersion,
+        email,
+        cysyncVersion,
+        cardNumber !== '04' && grouped,
+        sessionId
+      );
+    if (newSessionId) this.emit('sessionId', newSessionId);
     this.emit('verified', verified);
 
     sequenceNumber = connection.getNewSequenceNumber();

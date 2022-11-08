@@ -39,7 +39,9 @@ export const verifyChallengeSignature = async (
   firmwareVersion: string,
   isTestApp: boolean,
   postfix1?: string,
-  postfix2?: string
+  postfix2?: string,
+  email?: string,
+  cysyncVersion?: string
 ) => {
   const challengeParams = {
     serial,
@@ -48,7 +50,9 @@ export const verifyChallengeSignature = async (
     firmwareVersion,
     postfix1,
     postfix2,
-    isTestApp
+    isTestApp,
+    email,
+    cysyncVersion
   };
   logger.info('Verifying challenge signature: Params', challengeParams);
   const res = await deviceServer.challenge(challengeParams).request();
