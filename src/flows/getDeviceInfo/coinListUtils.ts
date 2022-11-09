@@ -1,7 +1,13 @@
+import { logger } from '../../utils';
+
 export const extractCoinListDetails = (rawCoinListDetails: string) => {
   const arr = [];
   const entryLength = 16;
   const coinIdLength = 8;
+  if (rawCoinListDetails.length % entryLength !== 0) {
+    logger.warn(`Invalid rawCoinListDetails : ${rawCoinListDetails}`);
+    return defaultCoinList('2.2.0'); // returning last coin list entry with max coins
+  }
   for (let i = 0; i < rawCoinListDetails.length; i += entryLength) {
     arr.push({
       id: parseInt(rawCoinListDetails.slice(i, i + coinIdLength), 16),
