@@ -678,23 +678,41 @@ export class TransactionSender extends CyFlow {
         throw new Error('Solana Wallet found, but coin is not Solana.');
       }
 
-      const signedTxn = await connection.waitForCommandOutput({
+      const preSignedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        expectedCommandTypes: [54, 79, 81, 71, 53, 91],
+        expectedCommandTypes: [79, 81, 71, 53, 91, 52],
         onStatus
       });
 
-      if ([79, 91, 53].includes(signedTxn.commandType)) {
+      if ([79, 91, 53].includes(preSignedTxn.commandType)) {
         this.emit('coinsConfirmed', false);
         throw new ExitFlowError();
       }
 
-      if (signedTxn.commandType === 81) {
+      if (preSignedTxn.commandType === 81) {
         this.emit('noWalletOnCard');
         throw new ExitFlowError();
       }
-      if (signedTxn.commandType === 71) {
+      if (preSignedTxn.commandType === 71) {
         this.emit('cardError');
+        throw new ExitFlowError();
+      }
+
+      const latestBlockhash = await wallet.getLatestBlockhashAsHex();
+      sequenceNumber = connection.getNewSequenceNumber();
+      await connection.sendCommand({
+        commandType: 92,
+        data: latestBlockhash,
+        sequenceNumber
+      });
+      const signedTxn = await connection.waitForCommandOutput({
+        sequenceNumber,
+        expectedCommandTypes: [54, 92],
+        onStatus: () => {}
+      });
+
+      if ([92].includes(signedTxn.commandType)) {
+        this.emit('coinsConfirmed', false);
         throw new ExitFlowError();
       }
 
@@ -707,7 +725,8 @@ export class TransactionSender extends CyFlow {
 
       const signedTxnSolana = wallet.getSignedTransaction(
         unsignedTransaction,
-        signedTxn.data
+        signedTxn.data,
+        latestBlockhash
       );
 
       try {
