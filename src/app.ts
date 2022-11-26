@@ -8,6 +8,7 @@ export * from './flows/deviceAuth';
 export * from './flows/getDeviceInfo';
 export * from './flows/fetchLogs';
 export * from './flows/cancelFlow';
+export * from './flows/signMessage';
 
 export { logLevel } from './utils';
 export * from './flows/flowError';
