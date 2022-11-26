@@ -909,7 +909,7 @@ export class TransactionSender extends CyFlow {
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
       } else if (coin instanceof SolanaCoinData) {
         wallet = new SolanaWallet(xpub, coin);
-        metaData = await wallet.generateMetaData(fee);
+        metaData = await wallet.generateMetaData(fee, sdkVersion);
         const { network } = coin;
         if (fee) {
           feeRate = fee;
