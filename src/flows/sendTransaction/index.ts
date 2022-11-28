@@ -40,7 +40,10 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
     gasLimit: number;
     contractAddress?: string;
     contractAbbr?: string;
+    contractData?: string;
+    nonce?: string;
   };
+  onlySignature?: boolean;
 }
 
 interface RunParams extends TransactionSenderRunOptions {
@@ -299,7 +302,6 @@ export class TransactionSender extends CyFlow {
         signedTxn.data,
         coin.chain
       );
-
       try {
         const isVerified = await wallet.verifySignedTxn(signedTxnEth);
         this.emit('signatureVerify', { isVerified, index: 0 });
@@ -359,7 +361,8 @@ export class TransactionSender extends CyFlow {
     utxoList,
     wallet,
     txnInfo,
-    inputs
+    inputs,
+    onlySignature
   }: RunParams) {
     const coin = COINS[coinType];
 
@@ -604,25 +607,29 @@ export class TransactionSender extends CyFlow {
         sequenceNumber
       });
 
-      const signedTxnEth = wallet.getSignedTransaction(
-        unsignedTransaction,
-        signedTxn.data,
-        coin.chain
-      );
+      if (onlySignature) {
+        this.emit('signature', signedTxn.data);
+      } else {
+        const signedTxnEth = wallet.getSignedTransaction(
+          unsignedTransaction,
+          signedTxn.data,
+          coin.chain
+        );
 
-      try {
-        const isVerified = await wallet.verifySignedTxn(signedTxnEth);
-        this.emit('signatureVerify', { isVerified, index: 0 });
-      } catch (error) {
-        this.emit('signatureVerify', {
-          isVerified: false,
-          index: -1,
-          error
-        });
+        try {
+          const isVerified = await wallet.verifySignedTxn(signedTxnEth);
+          this.emit('signatureVerify', { isVerified, index: 0 });
+        } catch (error) {
+          this.emit('signatureVerify', {
+            isVerified: false,
+            index: -1,
+            error
+          });
+        }
+
+        logger.info('Signed txn', { signedTxnEth });
+        this.emit('signedTxn', signedTxnEth);
       }
-
-      logger.info('Signed txn', { signedTxnEth });
-      this.emit('signedTxn', signedTxnEth);
     } else if (wallet instanceof NearWallet) {
       if (!(coin instanceof NearCoinData)) {
         throw new Error('Near Wallet found, but coin is not Near.');
@@ -655,24 +662,28 @@ export class TransactionSender extends CyFlow {
         sequenceNumber
       });
 
-      const signedTxnNear = wallet.getSignedTransaction(
-        unsignedTransaction,
-        signedTxn.data
-      );
+      if (onlySignature) {
+        this.emit('signature', signedTxn.data);
+      } else {
+        const signedTxnNear = wallet.getSignedTransaction(
+          unsignedTransaction,
+          signedTxn.data
+        );
 
-      try {
-        const isVerified = await wallet.verifySignedTxn(signedTxnNear);
-        this.emit('signatureVerify', { isVerified, index: 0 });
-      } catch (error) {
-        this.emit('signatureVerify', {
-          isVerified: false,
-          index: -1,
-          error
-        });
+        try {
+          const isVerified = await wallet.verifySignedTxn(signedTxnNear);
+          this.emit('signatureVerify', { isVerified, index: 0 });
+        } catch (error) {
+          this.emit('signatureVerify', {
+            isVerified: false,
+            index: -1,
+            error
+          });
+        }
+
+        logger.info('Signed txn', { signedTxnNear });
+        this.emit('signedTxn', signedTxnNear);
       }
-
-      logger.info('Signed txn', { signedTxnNear });
-      this.emit('signedTxn', signedTxnNear);
     } else if (wallet instanceof SolanaWallet) {
       if (!(coin instanceof SolanaCoinData)) {
         throw new Error('Solana Wallet found, but coin is not Solana.');
@@ -723,25 +734,29 @@ export class TransactionSender extends CyFlow {
         sequenceNumber
       });
 
-      const signedTxnSolana = wallet.getSignedTransaction(
-        unsignedTransaction,
-        signedTxn.data,
-        latestBlockhash
-      );
+      if (onlySignature) {
+        this.emit('signature', signedTxn.data);
+      } else {
+        const signedTxnSolana = wallet.getSignedTransaction(
+          unsignedTransaction,
+          signedTxn.data,
+          latestBlockhash
+        );
 
-      try {
-        const isVerified = await wallet.verifySignedTxn(signedTxnSolana);
-        this.emit('signatureVerify', { isVerified, index: 0 });
-      } catch (error) {
-        this.emit('signatureVerify', {
-          isVerified: false,
-          index: -1,
-          error
-        });
+        try {
+          const isVerified = await wallet.verifySignedTxn(signedTxnSolana);
+          this.emit('signatureVerify', { isVerified, index: 0 });
+        } catch (error) {
+          this.emit('signatureVerify', {
+            isVerified: false,
+            index: -1,
+            error
+          });
+        }
+
+        logger.info('Signed txn', { signedTxnSolana });
+        this.emit('signedTxn', signedTxnSolana);
       }
-
-      logger.info('Signed txn', { signedTxnSolana });
-      this.emit('signedTxn', signedTxnSolana);
     } else {
       const inputSignatures: string[] = [];
       for (const _ of txnInfo.inputs) {
@@ -814,7 +829,9 @@ export class TransactionSender extends CyFlow {
       data = {
         gasLimit: 21000,
         contractAddress: undefined,
-        contractAbbr: undefined
+        contractAbbr: undefined,
+        contractData: undefined,
+        nonce: undefined
       },
       customAccount,
       newAccountId
@@ -848,7 +865,8 @@ export class TransactionSender extends CyFlow {
           throw new Error('Invalid token or coinType');
         }
 
-        const { gasLimit, contractAddress, contractAbbr } = data;
+        const { gasLimit, contractAddress, contractAbbr, nonce, contractData } =
+          data;
         const { network, chain } = coin;
         wallet = new EthereumWallet(xpub, coin);
 
@@ -871,15 +889,17 @@ export class TransactionSender extends CyFlow {
         let amount: BigNumber;
         let txFee: BigNumber;
 
-        const unsignedResp = await wallet.generateUnsignedTransaction(
-          outputList[0].address,
-          outputList[0].value,
-          feeRate,
+        const unsignedResp = await wallet.generateUnsignedTransaction({
+          outputAddress: outputList[0].address,
+          amount: outputList[0].value,
+          gasPrice: feeRate,
           gasLimit,
           chain,
           isSendAll,
-          contractAddress
-        );
+          contractAddress,
+          contractData,
+          nonce
+        });
         ({
           amount,
           fee: txFee,
@@ -918,13 +938,13 @@ export class TransactionSender extends CyFlow {
               newAccountId,
               customAccount
             )
-          : await wallet.generateUnsignedTransaction(
-              outputList[0].address,
-              outputList[0].value,
+          : await wallet.generateUnsignedTransaction({
+              address: outputList[0].address,
+              amount: outputList[0].value,
               isSendAll,
-              new BigNumber(feeRate),
-              customAccount
-            );
+              transactionFee: new BigNumber(feeRate),
+              senderAddressArg: customAccount
+            });
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
       } else if (coin instanceof SolanaCoinData) {
         wallet = new SolanaWallet(xpub, coin);
@@ -943,12 +963,12 @@ export class TransactionSender extends CyFlow {
         totalFees = new BigNumber(feeRate)
           .dividedBy(10 ** coin.decimal)
           .toString();
-        const txnData = await wallet.generateUnsignedTransaction(
-          outputList[0].address,
-          outputList[0].value,
+        const txnData = await wallet.generateUnsignedTransaction({
+          address: outputList[0].address,
+          amount: outputList[0].value,
           isSendAll,
-          new BigNumber(feeRate)
-        );
+          transactionFee: new BigNumber(feeRate)
+        });
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
       } else {
         wallet = new BitcoinWallet({
@@ -980,11 +1000,11 @@ export class TransactionSender extends CyFlow {
         metaData = tempValue.metaData;
         txnInfo = tempValue;
 
-        const txnData = await wallet.generateUnsignedTransaction(
+        const txnData = await wallet.generateUnsignedTransaction({
           outputList,
           feeRate,
           isSendAll
-        );
+        });
 
         totalFees = new BigNumber(txnData.fee)
           .dividedBy(coin.multiplier)
