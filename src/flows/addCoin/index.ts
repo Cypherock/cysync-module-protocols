@@ -52,7 +52,7 @@ export class CoinAdder extends CyFlow {
     const resyncIndex = isResync ? '01' : '00';
     await connection.sendData(
       45,
-      walletId + resyncIndex + createCoinIndexes(sdkVersion, selectedCoins)
+      walletId + resyncIndex + createCoinIndexes('1.0.0', selectedCoins)
     );
 
     const data = await connection.receiveData([46, 75, 76], 30000);
