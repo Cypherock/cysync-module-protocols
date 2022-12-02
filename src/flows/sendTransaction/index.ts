@@ -176,11 +176,7 @@ export class TransactionSender extends CyFlow {
     this.emit('metadataSent');
 
     const receivedData = await connection.receiveData([51, 75, 76], 30000);
-    if (receivedData.commandType === 75) {
-      logger.info('Wallet is locked');
-      this.emit('locked');
-      throw new ExitFlowError();
-    }
+    if (receivedData.commandType === 75) this.handleCommand75();
     if (receivedData.commandType === 76) {
       commandHandler76(receivedData, this);
     }
@@ -348,6 +344,12 @@ export class TransactionSender extends CyFlow {
     }
   }
 
+  handleCommand75() {
+    logger.info('Wallet is locked');
+    this.emit('locked');
+    throw new ExitFlowError();
+  }
+
   async runOperation({
     connection,
     walletId,
@@ -504,11 +506,7 @@ export class TransactionSender extends CyFlow {
       onStatus
     });
 
-    if (receivedData.commandType === 75) {
-      logger.info('Wallet is locked');
-      this.emit('locked');
-      throw new ExitFlowError();
-    }
+    if (receivedData.commandType === 75) this.handleCommand75();
     if (receivedData.commandType === 76) {
       commandHandler76(receivedData, this);
     }
@@ -580,9 +578,11 @@ export class TransactionSender extends CyFlow {
 
       const signedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        expectedCommandTypes: [54, 79, 81, 71, 53],
+        expectedCommandTypes: [54, 79, 81, 71, 53, 75],
         onStatus
       });
+
+      if (signedTxn.commandType === 75) this.handleCommand75();
 
       if (signedTxn.commandType === 79 || signedTxn.commandType === 53) {
         this.emit('coinsConfirmed', false);
@@ -630,9 +630,11 @@ export class TransactionSender extends CyFlow {
 
       const signedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        expectedCommandTypes: [54, 79, 81, 71, 53, 91],
+        expectedCommandTypes: [54, 79, 81, 71, 53, 91, 75],
         onStatus
       });
+
+      if (signedTxn.commandType === 75) this.handleCommand75();
 
       if ([79, 91, 53].includes(signedTxn.commandType)) {
         this.emit('coinsConfirmed', false);
@@ -680,9 +682,11 @@ export class TransactionSender extends CyFlow {
 
       const preSignedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
-        expectedCommandTypes: [79, 81, 71, 53, 91, 52],
+        expectedCommandTypes: [79, 81, 71, 53, 91, 52, 75],
         onStatus
       });
+
+      if (preSignedTxn.commandType === 75) this.handleCommand75();
 
       if ([79, 91, 53].includes(preSignedTxn.commandType)) {
         this.emit('coinsConfirmed', false);
@@ -754,9 +758,11 @@ export class TransactionSender extends CyFlow {
 
         const inputSig = await connection.waitForCommandOutput({
           sequenceNumber,
-          expectedCommandTypes: [54, 79, 81, 71, 53],
+          expectedCommandTypes: [54, 79, 81, 71, 53, 75],
           onStatus
         });
+
+        if (inputSig.commandType === 75) this.handleCommand75();
 
         if (inputSig.commandType === 79 || inputSig.commandType === 53) {
           this.emit('coinsConfirmed', false);
