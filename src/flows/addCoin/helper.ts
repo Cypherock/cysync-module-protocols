@@ -3,8 +3,10 @@ import {
   CoinData,
   COINS,
   EthCoinData,
+  FeatureName,
   hexToAscii,
-  intToUintByte
+  intToUintByte,
+  isFeatureEnabled
 } from '@cypherock/communication';
 import { Coin } from '@cypherock/database';
 
@@ -52,7 +54,10 @@ export const formatCoinsForDB = async (
   return coins;
 };
 
-export const createCoinIndexes = (selectedCoins: string[]) => {
+export const createCoinIndexes = (
+  sdkVersion: string,
+  selectedCoins: string[]
+) => {
   const coinLength = intToUintByte(selectedCoins.length, 8);
   const coinIndexList = [];
   const chainIndexList = [];
@@ -67,10 +72,14 @@ export const createCoinIndexes = (selectedCoins: string[]) => {
     const coinIndex = coin.coinIndex;
     coinIndexList.push(coinIndex);
 
-    let chainIndex = '00';
+    const longChainId = isFeatureEnabled(
+      FeatureName.EvmLongChainId,
+      sdkVersion
+    );
+    let chainIndex = longChainId ? '0000000000000000' : '00';
 
     if (coin instanceof EthCoinData) {
-      chainIndex = intToUintByte(coin.chain, 8);
+      chainIndex = intToUintByte(coin.chain, longChainId ? 64 : 8);
     }
 
     chainIndexList.push(chainIndex);
