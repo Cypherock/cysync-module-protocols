@@ -871,7 +871,8 @@ export class TransactionSender extends CyFlow {
         metaData = await wallet.generateMetaData(
           sdkVersion,
           contractAddress,
-          contractAbbr || coinType
+          contractAbbr || coinType,
+          outputList[0].address.startsWith('one1')
         );
 
         let amount: BigNumber;
