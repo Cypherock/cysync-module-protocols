@@ -418,7 +418,7 @@ export class TransactionReceiver extends CyFlow {
 
         if (coin instanceof EthCoinData) {
           address =
-            coin.coinListId === 0x0e
+            coin.coinListId === COINS['one'].coinListId
               ? Buffer.from(addressHex, 'hex').toString('utf-8')
               : `0x${addressHex.toLowerCase()}`;
         } else if (coin instanceof NearCoinData) {
