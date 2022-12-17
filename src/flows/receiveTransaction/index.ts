@@ -417,7 +417,10 @@ export class TransactionReceiver extends CyFlow {
         let address = '';
 
         if (coin instanceof EthCoinData) {
-          address = `0x${addressHex.toLowerCase()}`;
+          address =
+            coin.coinListId === COINS.one.coinListId
+              ? Buffer.from(addressHex, 'hex').toString('utf-8')
+              : `0x${addressHex.toLowerCase()}`;
         } else if (coin instanceof NearCoinData) {
           address = customAccount || addressHex;
         } else if (coin instanceof SolanaCoinData) {

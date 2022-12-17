@@ -1,8 +1,15 @@
-import { PacketVersion, PacketVersionMap } from '@cypherock/communication';
+import {
+  FeatureName,
+  isFeatureEnabled,
+  PacketVersion,
+  PacketVersionMap
+} from '@cypherock/communication';
 import { DeviceDB } from '@cypherock/database';
 
 import logger from '../../utils/logger';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
+
+import { defaultCoinList, extractCoinListDetails } from './coinListUtils';
 
 export interface GetDeviceInfoRunOptions extends CyFlowRunOptions {
   deviceDB: DeviceDB;
@@ -57,9 +64,10 @@ export class GetDeviceInfo extends CyFlow {
 
   async runOperation({
     connection,
-    deviceDB
+    deviceDB,
+    sdkVersion
   }: GetDeviceInfoRunOptions & { packetVersion: PacketVersion }) {
-    const sequenceNumber = connection.getNewSequenceNumber();
+    let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
       commandType: 87,
       data: '00',
@@ -77,6 +85,32 @@ export class GetDeviceInfo extends CyFlow {
 
     const firmwareV = (firmwareVersion + '').toLowerCase();
     this.emit('firmwareVersion', firmwareV);
+
+    // fetch coinList before throwing any errors
+    let coinList = defaultCoinList(sdkVersion);
+    if (isFeatureEnabled(FeatureName.GetCoinListFromDevice, sdkVersion)) {
+      logger.info('Getting CoinList Details');
+
+      sequenceNumber = connection.getNewSequenceNumber();
+      await connection.sendCommand({
+        commandType: 99,
+        data: '00',
+        sequenceNumber
+      });
+
+      const coinData = await connection.waitForCommandOutput({
+        expectedCommandTypes: [99],
+        sequenceNumber,
+        onStatus: () => {}
+      });
+
+      const rawCoinListDetails = coinData.data;
+
+      coinList = extractCoinListDetails(rawCoinListDetails);
+    }
+
+    logger.info('CoinList Details', { coinList });
+    this.emit('coinList', coinList);
 
     if (isAuthenticated === '00') {
       this.emit('auth', false);
@@ -143,7 +177,7 @@ export class GetDeviceInfo extends CyFlow {
 
       if (ready) {
         if (packetVersion === PacketVersionMap.v3) {
-          await this.runOperation({ ...params, packetVersion });
+          await this.runOperation({ ...params, packetVersion, sdkVersion });
         } else {
           await this.runLegacy({ ...params, packetVersion });
         }
