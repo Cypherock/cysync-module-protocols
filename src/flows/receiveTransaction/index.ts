@@ -5,6 +5,8 @@ import {
   DeviceErrorType,
   DeviceIdleState,
   EthCoinData,
+  EthCoinMap,
+  ETHCOINS,
   NearCoinData,
   PacketVersionMap,
   SolanaCoinData,
@@ -19,10 +21,13 @@ import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
 export interface TransactionReceiverRunOptions extends CyFlowRunOptions {
   addressDB: AddressDB;
+  accountId: string;
+  accountType?: string;
+  accountIndex: number;
+  coinId: string;
   walletId: string;
   coinType: string;
   xpub: string;
-  zpub?: string;
   contractAbbr?: string;
   passphraseExists?: boolean;
   pinExists?: boolean;
@@ -218,6 +223,7 @@ export class TransactionReceiver extends CyFlow {
     connection,
     walletId,
     coinType,
+    coinId,
     receiveAddress,
     receiveAddressPath,
     passphraseExists = false,
@@ -226,10 +232,10 @@ export class TransactionReceiver extends CyFlow {
     userAction,
     replaceAccountAction
   }: RunParams) {
-    const coin = COINS[coinType];
+    const coin = COINS[coinId];
 
     if (!coin) {
-      throw new Error(`Invalid coinType ${coinType}`);
+      throw new Error(`Invalid coinType ${coinId}`);
     }
 
     logger.info('Receive addr data', {
@@ -418,7 +424,7 @@ export class TransactionReceiver extends CyFlow {
 
         if (coin instanceof EthCoinData) {
           address =
-            coin.coinListId === COINS.one.coinListId
+            coin.coinListId === ETHCOINS[EthCoinMap.harmony].coinListId
               ? Buffer.from(addressHex, 'hex').toString('utf-8')
               : `0x${addressHex.toLowerCase()}`;
         } else if (coin instanceof NearCoinData) {
@@ -546,9 +552,11 @@ export class TransactionReceiver extends CyFlow {
       sdkVersion,
       addressDB,
       walletId,
-      coinType,
+      coinId,
+      accountId,
+      accountType,
+      accountIndex,
       xpub,
-      zpub,
       contractAbbr = 'ETH',
       customAccount
     } = params;
@@ -560,18 +568,20 @@ export class TransactionReceiver extends CyFlow {
       let receiveAddressPath = '';
       let wallet: any;
 
-      const coin = COINS[coinType];
+      const coin = COINS[coinId];
 
       if (!coin) {
-        throw new Error(`Invalid coinType ${coinType}`);
+        throw new Error(`Invalid coinType ${coinId}`);
       }
 
       if (coin instanceof EthCoinData) {
         wallet = newWallet({
-          coinType,
+          coinId,
+          accountId,
+          accountType,
+          accountIndex,
           xpub,
           walletId,
-          zpub,
           addressDB
         });
         receiveAddress = wallet.newReceiveAddress().toLowerCase();
@@ -581,10 +591,12 @@ export class TransactionReceiver extends CyFlow {
         );
       } else if (coin instanceof NearCoinData && customAccount) {
         wallet = newWallet({
-          coinType,
+          coinId,
+          accountId,
+          accountType,
+          accountIndex,
           xpub,
           walletId,
-          zpub,
           addressDB
         });
         receiveAddress = customAccount;
@@ -594,10 +606,12 @@ export class TransactionReceiver extends CyFlow {
         );
       } else {
         wallet = newWallet({
-          coinType,
+          coinId,
+          accountId,
+          accountType,
+          accountIndex,
           xpub,
           walletId,
-          zpub,
           addressDB
         });
         receiveAddress = await wallet.newReceiveAddress();

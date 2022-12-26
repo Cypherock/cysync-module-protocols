@@ -29,7 +29,10 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
   pinExists: boolean;
   passphraseExists: boolean;
   xpub: string;
-  zpub?: string;
+  accountId: string;
+  accountIndex: number;
+  accountType?: string;
+  coinId: string;
   customAccount?: string;
   newAccountId?: string;
   coinType: string;
@@ -812,7 +815,10 @@ export class TransactionSender extends CyFlow {
       transactionDB,
       walletId,
       xpub,
-      zpub,
+      accountId,
+      accountIndex,
+      accountType,
+      coinId,
       coinType,
       outputList,
       fee,
@@ -960,9 +966,11 @@ export class TransactionSender extends CyFlow {
       } else {
         wallet = new BitcoinWallet({
           xpub,
-          coinType,
+          coinId,
+          accountId,
+          accountIndex,
+          accountType,
           walletId,
-          zpub,
           addressDb: addressDB,
           transactionDb: transactionDB
         });
@@ -1058,23 +1066,41 @@ export class TransactionSender extends CyFlow {
     }
   }
 
-  public async calcApproxFee(
-    xpub: string,
-    zpub: string | undefined,
-    walletId: string,
-    coinType: string,
-    outputList: Array<{ address: string; value?: BigNumber }>,
-    fee: number,
-    isSendAll?: boolean,
-    data: TransactionSenderRunOptions['data'] = {
-      gasLimit: 21000,
-      contractAddress: undefined,
-      contractAbbr: undefined
-    },
-    transactionDB?: TransactionDB,
-    customAccount?: string
-  ) {
+  public async calcApproxFee(params: {
+    xpub: string;
+    accountId: string;
+    accountIndex: number;
+    accountType?: string;
+    coinId: string;
+    walletId: string;
+    coinType: string;
+    outputList: Array<{ address: string; value?: BigNumber }>;
+    fee: number;
+    isSendAll?: boolean;
+    data?: TransactionSenderRunOptions['data'];
+    transactionDB?: TransactionDB;
+    customAccount?: string;
+  }) {
     try {
+      const {
+        xpub,
+        accountId,
+        accountIndex,
+        accountType,
+        coinId,
+        walletId,
+        coinType,
+        outputList,
+        fee,
+        isSendAll,
+        data = {
+          gasLimit: 21000,
+          contractAddress: undefined,
+          contractAbbr: undefined
+        },
+        transactionDB,
+        customAccount
+      } = params;
       this.cancelled = false;
       let feeRate;
       let totalFees: string;
@@ -1196,9 +1222,11 @@ export class TransactionSender extends CyFlow {
       } else {
         const wallet = new BitcoinWallet({
           xpub,
-          coinType,
+          accountId,
+          accountIndex,
+          accountType,
+          coinId,
           walletId,
-          zpub,
           transactionDb: transactionDB
         });
 

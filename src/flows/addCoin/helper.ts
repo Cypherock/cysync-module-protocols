@@ -8,7 +8,7 @@ import {
   intToUintByte,
   isFeatureEnabled
 } from '@cypherock/communication';
-import { Coin } from '@cypherock/database';
+import { Account, AccountDB } from '@cypherock/database';
 
 import { FlowError, FlowErrorType } from '../flowError';
 
@@ -16,39 +16,34 @@ export const formatCoinsForDB = async (
   walletId: string,
   xpubRaw: string,
   coinTypes: any
-): Promise<Coin[]> => {
-  const coins: Coin[] = [];
+): Promise<Account[]> => {
+  const coins: Account[] = [];
   let sliceIndex = 0;
   for (let i = 0; i < coinTypes.length; i++) {
     const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-    let z;
+    // let z;
     sliceIndex += 224;
 
     const coinData = COINS[coinTypes[i]];
     if (coinData instanceof BtcCoinData && coinData.hasSegwit) {
-      z = xpubRaw.slice(sliceIndex, sliceIndex + 222);
+      // z = xpubRaw.slice(sliceIndex, sliceIndex + 222);
       sliceIndex += 224;
     }
 
     const accountXpub = hexToAscii(x);
-    let accountZpub;
 
-    if (z) {
-      accountZpub = hexToAscii(z);
-    }
-
-    const coin: Coin = {
+    const coin: Account = {
+      accountId: '',
+      accountIndex: 0,
+      coinId: coinData.id,
+      accountType: '',
       totalBalance: '0',
       totalUnconfirmedBalance: '0',
-      xpubBalance: '0',
-      xpubUnconfirmedBalance: '0',
-      slug: coinTypes[i],
+      slug: coinData.abbr,
       walletId,
-      xpub: accountXpub,
-      zpub: accountZpub,
-      price: 0,
-      priceLastUpdatedAt: undefined
+      xpub: accountXpub
     };
+    coin.accountId = AccountDB.buildAccountIndex(coin);
     coins.push(coin);
   }
   return coins;
