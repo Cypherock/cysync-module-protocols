@@ -88,7 +88,10 @@ export class GetDeviceInfo extends CyFlow {
 
     // fetch coinList before throwing any errors
     let coinList = defaultCoinList(sdkVersion);
-    if (isFeatureEnabled(FeatureName.GetCoinListFromDevice, sdkVersion)) {
+    if (
+      isAuthenticated === '01' &&
+      isFeatureEnabled(FeatureName.GetCoinListFromDevice, sdkVersion)
+    ) {
       logger.info('Getting CoinList Details');
 
       sequenceNumber = connection.getNewSequenceNumber();
