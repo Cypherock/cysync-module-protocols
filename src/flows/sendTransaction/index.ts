@@ -43,6 +43,7 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
     gasLimit: number;
     contractAddress?: string;
     contractAbbr?: string;
+    subCoinId?: string;
   };
 }
 
@@ -358,22 +359,22 @@ export class TransactionSender extends CyFlow {
     walletId,
     pinExists,
     passphraseExists,
-    coinType,
     metaData,
     unsignedTransaction,
     utxoList,
     wallet,
     txnInfo,
-    inputs
+    inputs,
+    coinId
   }: RunParams) {
-    const coin = COINS[coinType];
+    const coin = COINS[coinId];
 
     if (!coin) {
-      throw new Error(`Invalid coinType ${coinType}`);
+      throw new Error(`Invalid coinId ${coinId}`);
     }
 
     logger.info('Send data', {
-      coin: coinType,
+      coin: coinId,
       metaData,
       unsignedTransaction
     });
@@ -845,15 +846,15 @@ export class TransactionSender extends CyFlow {
       let utxoList: any[] = [];
       let sendMaxAmount: string | null = null;
 
-      const coin = COINS[coinType];
+      const coin = COINS[coinId];
 
       if (!coin) {
-        throw new Error(`Invalid coinType ${coinType}`);
+        throw new Error(`Invalid coinId ${coinId}`);
       }
 
       if (coin instanceof EthCoinData) {
-        const token = data.contractAbbr
-          ? coin.tokenList[data.contractAbbr.toLowerCase()]
+        const token = data.subCoinId
+          ? coin.tokenList[data.subCoinId || '']
           : coin;
 
         if (!token) {
@@ -1089,14 +1090,14 @@ export class TransactionSender extends CyFlow {
         accountType,
         coinId,
         walletId,
-        coinType,
         outputList,
         fee,
         isSendAll,
         data = {
           gasLimit: 21000,
           contractAddress: undefined,
-          contractAbbr: undefined
+          contractAbbr: undefined,
+          subCoinId: undefined
         },
         transactionDB,
         customAccount
@@ -1105,10 +1106,10 @@ export class TransactionSender extends CyFlow {
       let feeRate;
       let totalFees: string;
 
-      const coin = COINS[coinType];
+      const coin = COINS[coinId];
 
       if (!coin) {
-        throw new Error(`Invalid coinType ${coinType}`);
+        throw new Error(`Invalid coinId ${coinId}`);
       }
 
       if (coin instanceof EthCoinData) {
@@ -1138,8 +1139,8 @@ export class TransactionSender extends CyFlow {
           .dividedBy(new BigNumber(coin.multiplier))
           .toString(10);
 
-        const token = data.contractAbbr
-          ? coin.tokenList[data.contractAbbr]
+        const token = data.subCoinId
+          ? coin.tokenList[data.subCoinId || '']
           : coin;
 
         if (!token) {
@@ -1235,7 +1236,7 @@ export class TransactionSender extends CyFlow {
         } else {
           logger.info(`Fetching optimal fees from the internet.`);
           const res = await Server.bitcoin.transaction
-            .getFees({ coinType })
+            .getFees({ coinType: coin.abbr })
             .request();
           // divide by 1024 to make fees in sat/byte from sat/kilobyte
           feeRate = Math.round(res.data.medium_fee_per_kb / 1024);
@@ -1265,7 +1266,7 @@ export class TransactionSender extends CyFlow {
 
       logger.info('Approximate txn fee', {
         approximateTxnFee: totalFees,
-        coin: coinType
+        coin: coinId
       });
       this.emit('approxTotalFee', totalFees);
     } catch (error) {
