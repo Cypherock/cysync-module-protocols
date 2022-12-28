@@ -166,7 +166,7 @@ export class GetDeviceInfo extends CyFlow {
           this.emit('sdkNotSupported', 'device');
         }
 
-        throw new Error('SDK not supported');
+        throw new ExitFlowError();
       }
 
       const packetVersion = connection.getPacketVersion();

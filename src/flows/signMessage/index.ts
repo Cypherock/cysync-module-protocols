@@ -18,6 +18,7 @@ export interface SignMessageRunOptions extends CyFlowRunOptions {
   xpub: string;
   coinType: string;
   message: string;
+  requestType: number;
 }
 
 interface RunParams extends SignMessageRunOptions {
@@ -54,7 +55,7 @@ export class SignMessage extends CyFlow {
 
     let sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
-      commandType: 50,
+      commandType: 93,
       data: walletId + metaData,
       sequenceNumber
     });
@@ -140,7 +141,7 @@ export class SignMessage extends CyFlow {
 
     const receivedData = await connection.waitForCommandOutput({
       sequenceNumber,
-      expectedCommandTypes: [75, 76, 51],
+      expectedCommandTypes: [75, 76, 94, 93],
       onStatus
     });
 
@@ -176,14 +177,14 @@ export class SignMessage extends CyFlow {
 
     sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
-      commandType: 52,
+      commandType: 94,
       data: messageHex,
       sequenceNumber
     });
 
     const signature = await connection.waitForCommandOutput({
       sequenceNumber,
-      expectedCommandTypes: [54, 79, 81, 71, 53, 75],
+      expectedCommandTypes: [93, 94, 95, 79, 81, 71, 75],
       onStatus
     });
 
@@ -193,7 +194,7 @@ export class SignMessage extends CyFlow {
       throw new ExitFlowError();
     }
 
-    if (signature.commandType === 79 || signature.commandType === 53) {
+    if (signature.commandType === 79 || signature.commandType === 93) {
       this.emit('coinsConfirmed', false);
       throw new ExitFlowError();
     }
@@ -220,7 +221,8 @@ export class SignMessage extends CyFlow {
   }
 
   async run(params: SignMessageRunOptions) {
-    const { connection, sdkVersion, xpub, coinType, message } = params;
+    const { connection, sdkVersion, xpub, coinType, message, requestType } =
+      params;
 
     this.flowInterupted = false;
 
@@ -245,7 +247,7 @@ export class SignMessage extends CyFlow {
       wallet = new EthereumWallet(xpub, coin);
 
       metaData = await wallet.generateMetaData(sdkVersion);
-      messageHex = await wallet.generateMessageHex(message);
+      messageHex = await wallet.generateMessageHex(message, requestType);
 
       await this.onStart(connection);
 
