@@ -51,7 +51,8 @@ export class CoinAdder extends CyFlow {
     passphraseExists
   }: CoinAdderRunOptions) {
     const sequenceNumber = connection.getNewSequenceNumber();
-    const addCoinData = walletId + createCoinIndex(sdkVersion, selectedCoin);
+    const addCoinData =
+      walletId + '00' + createCoinIndex(sdkVersion, selectedCoin);
     await connection.sendCommand({
       commandType: 45,
       data: addCoinData,
