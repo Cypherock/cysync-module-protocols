@@ -1,84 +1,50 @@
-import {
-  BtcCoinData,
-  CoinData,
-  COINS,
-  EthCoinData,
-  FeatureName,
-  hexToAscii,
-  intToUintByte,
-  isFeatureEnabled
-} from '@cypherock/communication';
+import { BtcCoinData, COINS, hexToAscii } from '@cypherock/communication';
 import { Account, AccountDB } from '@cypherock/database';
-
-import { FlowError, FlowErrorType } from '../flowError';
+import { BitcoinWallet } from '@cypherock/wallet';
 
 export const formatCoinsForDB = async (
   walletId: string,
   xpubRaw: string,
-  coinTypes: any
+  coinType: string
 ): Promise<Account[]> => {
-  const coins: Account[] = [];
   let sliceIndex = 0;
-  for (let i = 0; i < coinTypes.length; i++) {
-    const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-    // let z;
-    sliceIndex += 224;
+  const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
+  // let z;
+  sliceIndex += 224;
 
-    const coinData = COINS[coinTypes[i]];
-    if (coinData instanceof BtcCoinData && coinData.hasSegwit) {
-      // z = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-      sliceIndex += 224;
-    }
+  const coinData = COINS[coinType];
 
-    const accountXpub = hexToAscii(x);
+  const accountXpub = hexToAscii(x);
 
-    const coin: Account = {
-      accountId: '',
-      accountIndex: 0,
-      coinId: coinData.id,
-      accountType: '',
-      totalBalance: '0',
-      totalUnconfirmedBalance: '0',
-      slug: coinData.abbr,
-      walletId,
-      xpub: accountXpub
-    };
-    coin.accountId = AccountDB.buildAccountIndex(coin);
-    coins.push(coin);
-  }
-  return coins;
+  const coin: Account = {
+    accountId: '',
+    accountIndex: 0,
+    coinId: coinData.id,
+    accountType: '',
+    totalBalance: '0',
+    totalUnconfirmedBalance: '0',
+    slug: coinData.abbr,
+    walletId,
+    xpub: accountXpub
+  };
+  coin.accountId = AccountDB.buildAccountIndex(coin);
+  return [coin];
 };
 
-export const createCoinIndexes = (
-  sdkVersion: string,
-  selectedCoins: string[]
+export const createCoinIndex = (
+  _sdkVersion: string,
+  selectedCoin: { accountIndex: number; accountType: string; id: string }
 ) => {
-  const coinLength = intToUintByte(selectedCoins.length, 8);
-  const coinIndexList = [];
-  const chainIndexList = [];
+  const coin = COINS[selectedCoin.id];
 
-  for (const elem of selectedCoins) {
-    const coin = COINS[elem];
-
-    if (!(coin instanceof CoinData)) {
-      throw new FlowError(FlowErrorType.ADD_COIN_UNKNOWN_ASSET, elem);
-    }
-
-    const coinIndex = coin.coinIndex;
-    coinIndexList.push(coinIndex);
-
-    const longChainId = isFeatureEnabled(
-      FeatureName.EvmLongChainId,
-      sdkVersion
+  if (coin instanceof BtcCoinData) {
+    return (
+      BitcoinWallet.getDerivationPath(
+        selectedCoin.accountIndex,
+        selectedCoin.accountType
+      ) + coin.coinIndex
     );
-    let chainIndex = longChainId ? '0000000000000000' : '00';
-
-    if (coin instanceof EthCoinData) {
-      chainIndex = intToUintByte(coin.chain, longChainId ? 64 : 8);
-    }
-
-    chainIndexList.push(chainIndex);
   }
 
-  return coinLength + coinIndexList.join('') + chainIndexList.join('');
+  return '';
 };
