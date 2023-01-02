@@ -901,7 +901,7 @@ export class TransactionSender extends CyFlow {
         const { gasLimit } = data;
         const { network } = coin;
 
-        const wallet = new EthereumWallet(0, xpub, coin);
+        const wallet = new EthereumWallet(accountIndex, xpub, coin);
 
         if (fee) {
           feeRate = fee;
@@ -943,7 +943,7 @@ export class TransactionSender extends CyFlow {
       } else if (coin instanceof NearCoinData) {
         const { network } = coin;
 
-        const wallet = new NearWallet(0, xpub, coin);
+        const wallet = new NearWallet(accountIndex, xpub, coin);
 
         if (fee) {
           feeRate = fee;
@@ -976,12 +976,7 @@ export class TransactionSender extends CyFlow {
       } else if (coin instanceof SolanaCoinData) {
         const { network } = coin;
 
-        const wallet = new SolanaWallet(
-          0,
-          SolanaAccountTypes.solanaBase,
-          xpub,
-          coin
-        );
+        const wallet = new SolanaWallet(accountIndex, accountType, xpub, coin);
 
         if (fee) {
           feeRate = fee;

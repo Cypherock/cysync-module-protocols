@@ -15,64 +15,31 @@ import {
 export const formatCoinsForDB = async (
   walletId: string,
   xpubRaw: string,
-  coinId: any
+  selectedCoin: { accountIndex: number; accountType: string; id: string }
 ): Promise<Account> => {
   let sliceIndex = 0;
   const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-  // let z;
   sliceIndex += 224;
 
-  const coinData = COINS[coinId];
-  if (coinData instanceof BtcCoinData && coinData.hasSegwit) {
-    // z = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-    sliceIndex += 224;
-  }
+  const coinData = COINS[selectedCoin.id];
 
   const accountXpub = hexToAscii(x);
 
-  const coin: Account = {
+  const account: Account = {
     name: '',
     accountId: '',
-    accountIndex: 0,
+    accountIndex: selectedCoin.accountIndex,
     coinId: coinData.id,
-    accountType: '',
+    accountType: selectedCoin.accountType,
     totalBalance: '0',
     totalUnconfirmedBalance: '0',
     walletId,
     xpub: accountXpub
   };
-  coin.accountId = AccountDB.buildAccountIndex(coin);
-
-  return coin;
+  account.accountId = AccountDB.buildAccountIndex(account);
+  account.name = AccountDB.createAccountName(account);
+  return account;
 };
-
-// export const formatCoinsForDB = async (
-//   walletId: string,
-//   xpubRaw: string,
-//   coinId: string
-// ): Promise<Account[]> => {
-//   let sliceIndex = 0;
-//   const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-//   // let z;
-//   sliceIndex += 224;
-
-//   const coinData = COINS[coinId];
-
-//   const accountXpub = hexToAscii(x);
-
-//   const coin: Account = {
-//     accountId: '',
-//     accountIndex: 0,
-//     coinId: coinData.id,
-//     accountType: '',
-//     totalBalance: '0',
-//     totalUnconfirmedBalance: '0',
-//     walletId,
-//     xpub: accountXpub
-//   };
-//   coin.accountId = AccountDB.buildAccountIndex(coin);
-//   return [coin];
-// };
 
 export const createCoinIndex = (
   _sdkVersion: string,
@@ -106,5 +73,6 @@ export const createCoinIndex = (
       selectedCoin.accountType
     );
   }
-  throw new Error('Invalid coin type');
+
+  throw new Error('Invalid coin type: ' + selectedCoin.id);
 };

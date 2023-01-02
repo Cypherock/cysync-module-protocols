@@ -143,11 +143,7 @@ export class CoinAdder extends CyFlow {
       throw new ExitFlowError();
     }
 
-    const xpubList = await formatCoinsForDB(
-      walletId,
-      data.data,
-      selectedCoin.id
-    );
+    const xpubList = await formatCoinsForDB(walletId, data.data, selectedCoin);
     logger.debug('Xpub list', { xpubList });
     this.emit('xpubList', xpubList);
   }
