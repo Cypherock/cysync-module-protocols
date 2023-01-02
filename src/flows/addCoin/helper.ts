@@ -29,6 +29,7 @@ export const formatCoinsForDB = async (
   const accountXpub = hexToAscii(x);
 
   const coin: Account = {
+    name: '',
     accountId: '',
     accountIndex: 0,
     coinId: coinData.id,
