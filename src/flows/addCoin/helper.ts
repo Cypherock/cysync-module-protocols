@@ -1,14 +1,16 @@
 import {
-  CoinData,
   EthCoinData,
-  FeatureName,
-  intToUintByte,
-  isFeatureEnabled
+  NearCoinData,
+  SolanaCoinData
 } from '@cypherock/communication';
 import { BtcCoinData, COINS, hexToAscii } from '@cypherock/communication';
 import { Account, AccountDB } from '@cypherock/database';
-
-import { FlowError, FlowErrorType } from '../flowError';
+import {
+  BitcoinWallet,
+  EthereumWallet,
+  NearWallet,
+  SolanaWallet
+} from '@cypherock/wallet';
 
 export const formatCoinsForDB = async (
   walletId: string,
@@ -71,53 +73,37 @@ export const formatCoinsForDB = async (
 //   return [coin];
 // };
 
-// export const createCoinIndex = (
-//   _sdkVersion: string,
-//   selectedCoin: { accountIndex: number; accountType: string; id: string }
-// ) => {
-//   const coin = COINS[selectedCoin.id];
-
-//   if (coin instanceof BtcCoinData) {
-//     return (
-//       BitcoinWallet.getDerivationPath(
-//         selectedCoin.accountIndex,
-//         selectedCoin.accountType
-//       ) + coin.coinIndex
-//     );
-//   }
-
-//   return '';
-// };
-
 export const createCoinIndex = (
-  sdkVersion: string,
-  selectedCoin: {
-    accountIndex: number;
-    accountType: string;
-    id: string;
-  }
+  _sdkVersion: string,
+  selectedCoin: { accountIndex: number; accountType: string; id: string }
 ) => {
-  const coinLength = intToUintByte(1, 8);
-  const coinIndexList = [];
-  const chainIndexList = [];
-
   const coin = COINS[selectedCoin.id];
 
-  if (!(coin instanceof CoinData)) {
-    throw new FlowError(FlowErrorType.ADD_COIN_UNKNOWN_ASSET, selectedCoin.id);
+  if (coin instanceof BtcCoinData) {
+    return BitcoinWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType,
+      coin.coinIndex
+    );
   }
-
-  const coinIndex = coin.coinIndex;
-  coinIndexList.push(coinIndex);
-
-  const longChainId = isFeatureEnabled(FeatureName.EvmLongChainId, sdkVersion);
-  let chainIndex = longChainId ? '0000000000000000' : '00';
-
   if (coin instanceof EthCoinData) {
-    chainIndex = intToUintByte(coin.chain, longChainId ? 64 : 8);
+    return EthereumWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType,
+      coin.chain
+    );
   }
-
-  chainIndexList.push(chainIndex);
-
-  return coinLength + coinIndexList.join('') + chainIndexList.join('');
+  if (coin instanceof NearCoinData) {
+    return NearWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType
+    );
+  }
+  if (coin instanceof SolanaCoinData) {
+    return SolanaWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType
+    );
+  }
+  throw new Error('Invalid coin type');
 };
