@@ -52,7 +52,7 @@ interface RunParams extends TransactionSenderRunOptions {
   inputs: any[];
 }
 
-enum SEND_TRANSACTION_STATUS {
+export enum SEND_TRANSACTION_STATUS {
   SEND_TXN_VERIFY_COIN = 1,
   SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN,
   SEND_TXN_UNSIGNED_TXN_RECEIVED,
@@ -75,7 +75,7 @@ enum SEND_TRANSACTION_STATUS {
   SEND_TXN_FINAL_SCREEN
 }
 
-enum SEND_TRANSACTION_STATUS_ETH {
+export enum SEND_TRANSACTION_STATUS_ETH {
   SEND_TXN_VERIFY_COIN_ETH = 1,
   SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN_ETH,
   SEND_TXN_UNSIGNED_TXN_RECEIVED_ETH,
@@ -98,7 +98,7 @@ enum SEND_TRANSACTION_STATUS_ETH {
   SEND_TXN_FINAL_SCREEN_ETH
 }
 
-enum SEND_TRANSACTION_STATUS_NEAR {
+export enum SEND_TRANSACTION_STATUS_NEAR {
   SEND_TXN_VERIFY_COIN_NEAR = 1,
   SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN_NEAR,
   SEND_TXN_VERIFY_TXN_NONCE_NEAR,
@@ -118,7 +118,7 @@ enum SEND_TRANSACTION_STATUS_NEAR {
   SEND_TXN_SIGN_TXN_NEAR
 }
 
-enum SEND_TRANSACTION_STATUS_SOLANA {
+export enum SEND_TRANSACTION_STATUS_SOLANA {
   SEND_TXN_VERIFY_COIN_SOLANA = 1,
   SEND_TXN_UNSIGNED_TXN_WAIT_SCREEN_SOLANA,
   SEND_TXN_UNSIGNED_TXN_RECEIVED_SOLANA,
@@ -562,7 +562,7 @@ export class TransactionSender extends CyFlow {
         const utxoResponse = await connection.waitForCommandOutput({
           sequenceNumber,
           expectedCommandTypes: [51],
-          onStatus: () => {}
+          onStatus: () => { }
         });
 
         if (utxoResponse.data.startsWith('00')) {
@@ -712,7 +712,7 @@ export class TransactionSender extends CyFlow {
       const signedTxn = await connection.waitForCommandOutput({
         sequenceNumber,
         expectedCommandTypes: [54, 92],
-        onStatus: () => {}
+        onStatus: () => { }
       });
 
       if ([92].includes(signedTxn.commandType)) {
@@ -921,16 +921,16 @@ export class TransactionSender extends CyFlow {
           .toString();
         const txnData = newAccountId
           ? await wallet.generateCreateAccountTransaction(
-              newAccountId,
-              customAccount
-            )
+            newAccountId,
+            customAccount
+          )
           : await wallet.generateUnsignedTransaction(
-              outputList[0].address,
-              outputList[0].value,
-              isSendAll,
-              new BigNumber(feeRate),
-              customAccount
-            );
+            outputList[0].address,
+            outputList[0].value,
+            isSendAll,
+            new BigNumber(feeRate),
+            customAccount
+          );
         ({ txn: unsignedTransaction, inputs, outputs } = txnData);
       } else if (coin instanceof SolanaCoinData) {
         wallet = new SolanaWallet(xpub, coin);

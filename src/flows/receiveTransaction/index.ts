@@ -36,7 +36,7 @@ interface RunParams extends TransactionReceiverRunOptions {
   receiveAddressPath: string;
 }
 
-enum RECEIVE_TRANSACTION_STATUS {
+export enum RECEIVE_TRANSACTION_STATUS {
   RECV_TXN_FIND_XPUB = 1,
   RECV_TXN_ENTER_PASSPHRASE,
   RECV_TXN_CONFIRM_PASSPHRASE,
@@ -52,7 +52,7 @@ enum RECEIVE_TRANSACTION_STATUS {
   RECV_TXN_FINAL_SCREEN
 }
 
-enum RECEIVE_TRANSACTION_STATUS_ETH {
+export enum RECEIVE_TRANSACTION_STATUS_ETH {
   RECV_TXN_FIND_XPUB_ETH = 1,
   RECV_TXN_ENTER_PASSPHRASE_ETH,
   RECV_TXN_CONFIRM_PASSPHRASE_ETH,
@@ -66,7 +66,7 @@ enum RECEIVE_TRANSACTION_STATUS_ETH {
   RECV_TXN_DISPLAY_ADDR_ETH
 }
 
-enum RECEIVE_TRANSACTION_STATUS_NEAR {
+export enum RECEIVE_TRANSACTION_STATUS_NEAR {
   RECV_TXN_FIND_XPUB_NEAR = 1,
   RECV_TXN_ENTER_PASSPHRASE_NEAR,
   RECV_TXN_CONFIRM_PASSPHRASE_NEAR,
@@ -87,7 +87,7 @@ enum RECEIVE_TRANSACTION_STATUS_NEAR {
   RECV_TXN_FINAL_SCREEN_NEAR
 }
 
-enum RECEIVE_TRANSACTION_STATUS_SOLANA {
+export enum RECEIVE_TRANSACTION_STATUS_SOLANA {
   RECV_TXN_FIND_XPUB_SOLANA = 1,
   RECV_TXN_ENTER_PASSPHRASE_SOLANA,
   RECV_TXN_CONFIRM_PASSPHRASE_SOLANA,
@@ -563,6 +563,7 @@ export class TransactionReceiver extends CyFlow {
         throw new Error(`Invalid coinType ${coinType}`);
       }
 
+      // determine receive address
       if (coin instanceof EthCoinData) {
         wallet = newWallet({
           coinType,
@@ -604,8 +605,10 @@ export class TransactionReceiver extends CyFlow {
         );
       }
 
+      // starting the connection
       await this.onStart(connection);
 
+      // wait for device to be ready
       const ready = await this.deviceReady(connection);
 
       if (ready) {
