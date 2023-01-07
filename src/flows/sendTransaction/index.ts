@@ -4,7 +4,6 @@ import {
   COINS,
   EthCoinData,
   NearCoinData,
-  SolanaAccountTypes,
   SolanaCoinData,
   StatusData
 } from '@cypherock/communication';
@@ -976,7 +975,12 @@ export class TransactionSender extends CyFlow {
       } else if (coin instanceof SolanaCoinData) {
         const { network } = coin;
 
-        const wallet = new SolanaWallet(accountIndex, accountType, xpub, coin);
+        const wallet = new SolanaWallet(
+          accountIndex,
+          accountType || '',
+          xpub,
+          coin
+        );
 
         if (fee) {
           feeRate = fee;
