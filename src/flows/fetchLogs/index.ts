@@ -1,4 +1,4 @@
-import { hexToAscii, PacketVersionMap } from '@cypherock/communication';
+import { hexToAscii } from '@cypherock/communication';
 import fs from 'fs';
 
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
@@ -14,38 +14,6 @@ enum LOGS_FETCHER_STATUS {
 export class LogsFetcher extends CyFlow {
   constructor() {
     super();
-  }
-
-  async runLegacy({
-    connection,
-    stream
-  }: LogsFetcherRunOptions & { stream: fs.WriteStream }) {
-    await connection.sendData(37, '00');
-
-    const acceptedRequest = await connection.receiveData([37], 30000);
-    if (acceptedRequest.data === '02') {
-      this.emit('loggingDisabled');
-      throw new ExitFlowError();
-    }
-
-    if (acceptedRequest.data !== '01') {
-      this.emit('acceptedRequest', false);
-      throw new ExitFlowError();
-    }
-
-    this.emit('acceptedRequest', true);
-    await connection.sendData(38, '00');
-
-    let data: any = '';
-    let rawData: string = '';
-    //end of packet in hex with carrige return and line feed.
-    while (rawData !== '656e646f667061636b65740d0a') {
-      const resp = await connection.receiveData([38], 2000);
-      rawData = resp.data;
-      data = hexToAscii(rawData);
-      stream.write(data);
-    }
-    this.emit('completed', true);
   }
 
   async runOperation({
@@ -120,12 +88,7 @@ export class LogsFetcher extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        const packetVersion = connection.getPacketVersion();
-        if (packetVersion === PacketVersionMap.v3) {
-          await this.runOperation({ ...params, stream });
-        } else {
-          await this.runLegacy({ ...params, stream });
-        }
+        await this.runOperation({ ...params, stream });
       } else {
         this.emit('notReady');
       }

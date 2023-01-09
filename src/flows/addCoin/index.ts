@@ -1,15 +1,16 @@
-import { PacketVersionMap } from '@cypherock/communication';
-
 import { commandHandler76 } from '../../handlers';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
-import { createCoinIndexes, formatCoinsForDB } from './helper';
+import { createCoinIndex, formatCoinsForDB } from './helper';
 
 export interface CoinAdderRunOptions extends CyFlowRunOptions {
   walletId: string;
-  selectedCoins: string[];
-  isResync: boolean;
+  selectedCoin: {
+    accountIndex: number;
+    accountType: string;
+    id: string;
+  };
   pinExists: boolean;
   passphraseExists: boolean;
 }
@@ -41,124 +42,19 @@ export class CoinAdder extends CyFlow {
     super();
   }
 
-  async runLegacy({
-    connection,
-    walletId,
-    selectedCoins,
-    isResync,
-    pinExists,
-    passphraseExists
-  }: CoinAdderRunOptions) {
-    const resyncIndex = isResync ? '01' : '00';
-    await connection.sendData(
-      45,
-      walletId + resyncIndex + createCoinIndexes('1.0.0', selectedCoins)
-    );
-
-    const data = await connection.receiveData([46, 75, 76], 30000);
-    if (data.commandType === 75) {
-      this.emit('locked');
-      throw new ExitFlowError();
-    }
-    if (data.commandType === 76) {
-      commandHandler76(data, this);
-    }
-    const coinConfirmed = data.data;
-    if (parseInt(coinConfirmed, 10)) {
-      this.emit('coinsConfirmed', true);
-    } else {
-      this.emit('coinsConfirmed', false);
-      throw new ExitFlowError();
-    }
-
-    if (passphraseExists) {
-      const passphraseData = await connection.receiveData([91, 90], 90000);
-
-      if (passphraseData.commandType === 91) {
-        this.emit('coinsConfirmed', false);
-        throw new ExitFlowError();
-      }
-
-      if (!passphraseData.data.startsWith('01')) {
-        throw new Error('Invalid data from device.');
-      }
-
-      this.emit('passphraseEntered');
-    }
-
-    if (pinExists) {
-      const pinData = await connection.receiveData([47, 79, 81], 90000);
-      if (pinData.commandType === 79) {
-        this.emit('coinsConfirmed', false);
-        throw new ExitFlowError();
-      }
-
-      if (pinData.commandType === 81) {
-        this.emit('noWalletOnCard');
-        throw new ExitFlowError();
-      }
-
-      const pinEntered = pinData.data;
-      if (parseInt(pinEntered, 10)) {
-        this.emit('pinEntered', true);
-      } else {
-        this.emit('pinEntered', false);
-        throw new ExitFlowError();
-      }
-    }
-
-    const data1 = await connection.receiveData([48, 79, 81, 71], 90000);
-    if (data1.commandType === 79) {
-      this.emit('coinsConfirmed', false);
-      throw new ExitFlowError();
-    }
-    if (data1.commandType === 81) {
-      this.emit('noWalletOnCard');
-      throw new ExitFlowError();
-    }
-    if (data1.commandType === 71) {
-      this.emit('cardError');
-      throw new ExitFlowError();
-    }
-
-    this.emit('cardTapped');
-
-    const xPubDetails = await connection.receiveData([49], 60000);
-    if (!xPubDetails) {
-      //I don't remember why I had put this condition.
-      this.emit('unknownError');
-      throw new Error('No xpub details found');
-    }
-
-    await connection.sendData(42, '01');
-    if (!isResync) {
-      const xpubList = await formatCoinsForDB(
-        walletId,
-        xPubDetails.data,
-        selectedCoins
-      );
-      logger.debug('Xpub list', { xpubList });
-      this.emit('xpubList', xpubList);
-    } else {
-      this.emit('xpubList', []);
-    }
-  }
-
   async runOperation({
     connection,
     sdkVersion,
     walletId,
-    selectedCoins,
-    isResync,
+    selectedCoin,
     pinExists,
     passphraseExists
   }: CoinAdderRunOptions) {
-    const resyncIndex = isResync ? '01' : '00';
     const sequenceNumber = connection.getNewSequenceNumber();
+    const addCoinData = walletId + createCoinIndex(sdkVersion, selectedCoin);
     await connection.sendCommand({
       commandType: 45,
-      data:
-        walletId + resyncIndex + createCoinIndexes(sdkVersion, selectedCoins),
+      data: addCoinData,
       sequenceNumber
     });
 
@@ -247,17 +143,9 @@ export class CoinAdder extends CyFlow {
       throw new ExitFlowError();
     }
 
-    if (!isResync) {
-      const xpubList = await formatCoinsForDB(
-        walletId,
-        data.data,
-        selectedCoins
-      );
-      logger.debug('Xpub list', { xpubList });
-      this.emit('xpubList', xpubList);
-    } else {
-      this.emit('xpubList', []);
-    }
+    const xpubList = await formatCoinsForDB(walletId, data.data, selectedCoin);
+    logger.debug('Xpub list', { xpubList });
+    this.emit('xpubList', xpubList);
   }
 
   /**
@@ -274,12 +162,7 @@ export class CoinAdder extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        const packetVersion = connection.getPacketVersion();
-        if (packetVersion === PacketVersionMap.v3) {
-          await this.runOperation(params);
-        } else if (packetVersion === PacketVersionMap.v2) {
-          await this.runLegacy(params);
-        }
+        await this.runOperation(params);
       } else {
         this.emit('notReady');
       }
