@@ -1,17 +1,12 @@
 import { RECEIVE_TRANSACTION_STATUS, RECEIVE_TRANSACTION_STATUS_ETH, RECEIVE_TRANSACTION_STATUS_NEAR, RECEIVE_TRANSACTION_STATUS_SOLANA, TransactionReceiverRunOptions } from '../receiveTransaction';
 import { SEND_TRANSACTION_STATUS, SEND_TRANSACTION_STATUS_ETH, SEND_TRANSACTION_STATUS_NEAR, SEND_TRANSACTION_STATUS_SOLANA } from '../sendTransaction';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
-// import { AddressDB } from '@cypherock/database';
 import {
     BtcCoinData,
     CoinGroup,
     COINS,
-    // DeviceError,
-    // DeviceErrorType,
-    // DeviceIdleState,
     EthCoinData,
     NearCoinData,
-    // PacketVersionMap,
     SolanaCoinData,
     StatusData
 } from '@cypherock/communication';
@@ -23,7 +18,7 @@ import newWallet, {
 } from '@cypherock/wallet';
 import { TransactionSenderRunOptions } from '../sendTransaction';
 import Server from '@cypherock/server-wrapper';
-import { logger } from '../../utils';
+import { logger, bytesToHex, stringToUTF8Bytes } from '../../utils';
 import BigNumber from 'bignumber.js';
 import { commandHandler76 } from '../../handlers';
 
@@ -54,6 +49,8 @@ export enum SWAP_TRANSACTION_EVENTS {
     RECEIVE_FLOW_COINS_CONFIRMED = 'coinsConfirmed',
     RECEIVE_FLOW_PIN_ENTERED = 'pinEntered',
     RECEIVE_FLOW_CARD_TAPPED = 'cardTapped',
+    CHANGELLY_ADDRESS = 'changellyAddress',
+    CHANGELLY_ID = 'changellyId',
     SEND_WALLET_LOCKED = 'sendWalletLocked',
     SEND_FLOW_CARD_ERROR = 'sendFlowCardError',
     NO_SEND_WALLET_ON_CARD = 'noSendWalletOnCard',
@@ -74,9 +71,27 @@ interface RunParams extends TransactionSwapperRunOptions {
     receiveAddressPath: string;
 }
 
-function debug(...params: any) {
-    console.log("== SWAP PROTOCOL ==", params);
-}
+/**
+ *  Creates a swap transaction between `fromToken` and `toToken` for an amount
+ *
+ * @param walletId The wallet to use for the swap
+ * @returns The transaction ID to later check the status of the swap and the
+ * payment address to send the tokens to.
+ */
+const createSwapTransaction = async (walletId: string, from: string, to: string, amount: string, address: string) => {
+    const { data } = await Server.swap.createTransaction({
+        walletId,
+        from,
+        to,
+        amount,
+        address
+    }).request();
+
+    return {
+        id: data.message.result.id,
+        payinAddress: data.message.result.payinAddress
+    };
+};
 
 export class TransactionSwapper extends CyFlow {
     constructor() {
@@ -123,7 +138,6 @@ export class TransactionSwapper extends CyFlow {
         let outputs: any[] = [];
         let utxoList: any[] = [];
         let sendMaxAmount: string | null = null;
-
 
         // determine metadata
         if (sendCoin instanceof EthCoinData) {
@@ -185,7 +199,6 @@ export class TransactionSwapper extends CyFlow {
             metaData = tempValue.metaData;
         }
 
-
         logger.info('Swap Transaction: Receive addr data', {
             coin: transactionReceiverRunOptions.coinType,
             receiveAddress,
@@ -193,10 +206,15 @@ export class TransactionSwapper extends CyFlow {
             walletId: transactionReceiverRunOptions.walletId
         });
 
-        let data = sendAmount + receiveAmount + changellyFee + transactionSenderRunOptions.walletId
+        const sendAmountHex = bytesToHex(stringToUTF8Bytes(parseFloat(sendAmount).toFixed(4))) + "00";
+        const receiveAmountHex = bytesToHex(stringToUTF8Bytes(parseFloat(receiveAmount).toFixed(4))) + "00";
+        const changellyFeeHex = bytesToHex(stringToUTF8Bytes(parseFloat(changellyFee).toFixed(4))) + "00";
+
+        let data = sendAmountHex + receiveAmountHex + changellyFeeHex + transactionSenderRunOptions.walletId
             + metaData + transactionReceiverRunOptions.walletId + receiveAddressPath;
 
         let sequenceNumber = connection.getNewSequenceNumber();
+
         await connection.sendCommand({
             commandType: 66,
             data,
@@ -210,7 +228,6 @@ export class TransactionSwapper extends CyFlow {
         let pinEnteredState = 0;
         let cardTapState = 0;
         let nearAccountDerivingState = 0;
-        // let nearReplaceAccountSelectedState = 0;
 
         this.emit(SWAP_TRANSACTION_EVENTS.RECEIVE_ADDRESS, receiveAddress);
 
@@ -229,7 +246,6 @@ export class TransactionSwapper extends CyFlow {
             RECEIVE_TRANSACTION_STATUS.RECV_TXN_TAP_CARD_SEND_CMD;
         let derivingAddressCmdStatus: number =
             RECEIVE_TRANSACTION_STATUS.RECV_TXN_DERIVE_ADD_SCREEN;
-        // let nearReplaceAccountSelectedStatus = 0;
 
         if (isEth) {
             requestAcceptedCmdStatus =
@@ -251,8 +267,6 @@ export class TransactionSwapper extends CyFlow {
                 RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_TAP_CARD_SEND_CMD_NEAR;
             derivingAddressCmdStatus =
                 RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_DERIVE_ADD_NEAR;
-            // nearReplaceAccountSelectedStatus =
-            //     RECEIVE_TRANSACTION_STATUS_NEAR.RECV_TXN_VERIFY_SAVE_ACC_NEAR;
         } else if (isSolana) {
             requestAcceptedCmdStatus =
                 RECEIVE_TRANSACTION_STATUS_SOLANA.RECV_TXN_FIND_XPUB_SOLANA;
@@ -265,19 +279,6 @@ export class TransactionSwapper extends CyFlow {
             derivingAddressCmdStatus =
                 RECEIVE_TRANSACTION_STATUS_SOLANA.RECV_TXN_DERIVE_ADD_SOLANA;
         }
-
-        // let stopWaitForAbort = false;
-
-        // const waitForAbort = async () => {
-        //     let status = await connection.getStatus();
-        //     logger.info('Starting status polling', { status });
-        //     while (status.deviceIdleState !== DeviceIdleState.IDLE) {
-        //         if (stopWaitForAbort) return;
-        //         status = await connection.getStatus({ logsDisabled: true });
-        //     }
-        //     logger.info('Ended status polling', { status });
-        //     throw new DeviceError(DeviceErrorType.DEVICE_ABORT);
-        // };
 
         const onStatus = (status: StatusData) => {
             if (
@@ -373,18 +374,30 @@ export class TransactionSwapper extends CyFlow {
             throw new Error('Invalid command');
         }
 
-        if (signedSwapAddressVerified.data.startsWith('01')) {
-            // HERE We will have the 
-            // - address verified bit
-            // - receive_address (variable length)
-            // - device serial (32 bytes)
-            // - signature (64 bytes)
+        let addressVerified = false;
 
-            // Tasks:
-            // 1. Extract the address and emit addressVerified
-            // 2. Send the entire packet to the server and receive the changelly address
+        if (signedSwapAddressVerified.data) {
+            const addressLength = signedSwapAddressVerified.data.length - 64 - 128 - 14 - 46;
+            const addressHex = signedSwapAddressVerified.data.slice(0, addressLength);
+            const deviceSerial = signedSwapAddressVerified.data.slice(addressLength, addressLength + 64);
+            const signature = signedSwapAddressVerified.data.slice(addressLength + 64, addressLength + 64 + 128);
+            const postfix1 = signedSwapAddressVerified.data.slice(addressLength + 64 + 128, addressLength + 64 + 128 + 14);
+            const postfix2 = signedSwapAddressVerified.data.slice(addressLength + 64 + 128 + 14, addressLength + 64 + 128 + 14 + 46);
 
-            const addressHex = signedSwapAddressVerified.data.slice(2);
+            const { data } = await Server.swap.verifyAddress({
+                address: addressHex,
+                serial: deviceSerial,
+                signature,
+                postfix1,
+                postfix2
+            }).request();
+
+            if (data.status != 1 || !data.verified) {
+                throw new Error("Address verification failed");
+            }
+
+            addressVerified = data.verified;
+
             let address = '';
 
             if (receiveCoin instanceof EthCoinData) {
@@ -401,18 +414,28 @@ export class TransactionSwapper extends CyFlow {
             }
 
             this.emit(SWAP_TRANSACTION_EVENTS.RECEIVE_ADDRESS_VERIFIED, address);
-        } else if (signedSwapAddressVerified.data === '00') {
-            this.emit(SWAP_TRANSACTION_EVENTS.RECEIVE_ADDRESS_VERIFIED, false);
-            throw new ExitFlowError();
-        } else {
-            throw new Error('Invalid command');
         }
 
-        let changellyAddress = '';
+        const { id, payinAddress } = await createSwapTransaction(transactionReceiverRunOptions.walletId,
+            transactionSenderRunOptions.coinType,
+            transactionReceiverRunOptions.coinType,
+            sendAmount,
+            receiveAddress);
+
+        let changellyAddress = payinAddress;
+
+        this.emit(SWAP_TRANSACTION_EVENTS.CHANGELLY_ADDRESS, changellyAddress);
+        this.emit(SWAP_TRANSACTION_EVENTS.CHANGELLY_ID, id);
+
+        sequenceNumber = connection.getNewSequenceNumber();
+        await connection.sendCommand({
+            commandType: 50,
+            data: addressVerified ? '01' : '00',
+            sequenceNumber
+        });
 
         transactionSenderRunOptions.outputList[0].address = changellyAddress;
 
-        // determine unsigned txn
         if (sendCoin instanceof EthCoinData && sendWallet instanceof EthereumWallet) {
             const token = transactionSenderRunOptions.data?.contractAbbr
                 ? sendCoin.tokenList[transactionSenderRunOptions.data.contractAbbr.toLowerCase()]
@@ -440,7 +463,7 @@ export class TransactionSwapper extends CyFlow {
             let txFee: BigNumber;
 
             const unsignedResp = await sendWallet.generateUnsignedTransaction(
-                transactionSenderRunOptions.outputList[0].address,
+                changellyAddress,
                 transactionSenderRunOptions.outputList[0].value,
                 feeRate,
                 gasLimit,
@@ -455,6 +478,7 @@ export class TransactionSwapper extends CyFlow {
                 inputs,
                 outputs
             } = unsignedResp);
+
             sendMaxAmount = amount
                 .dividedBy(new BigNumber(token.multiplier))
                 .toString();
@@ -481,7 +505,7 @@ export class TransactionSwapper extends CyFlow {
                     transactionSenderRunOptions.customAccount
                 )
                 : await sendWallet.generateUnsignedTransaction(
-                    transactionSenderRunOptions.outputList[0].address,
+                    changellyAddress,
                     transactionSenderRunOptions.outputList[0].value,
                     transactionSenderRunOptions.isSendAll || false,
                     new BigNumber(feeRate),
@@ -504,7 +528,7 @@ export class TransactionSwapper extends CyFlow {
                 .dividedBy(10 ** sendCoin.decimal)
                 .toString();
             const txnData = await sendWallet.generateUnsignedTransaction(
-                transactionSenderRunOptions.outputList[0].address,
+                changellyAddress,
                 transactionSenderRunOptions.outputList[0].value,
                 transactionSenderRunOptions.isSendAll || false,
                 new BigNumber(feeRate)
@@ -560,7 +584,7 @@ export class TransactionSwapper extends CyFlow {
             this.emit('sendMaxAmount', sendMaxAmount);
         }
 
-        logger.info('Swap Transaction: Send data', {
+        logger.info('SwapTransaction: Send data', {
             coin: transactionSenderRunOptions.coinType,
             metaData,
             unsignedTransaction
@@ -991,11 +1015,6 @@ export class TransactionSwapper extends CyFlow {
             let receiveWallet: any;
 
             // Send Flow Details
-
-
-
-            debug("SDK Version", sdkVersion);
-
             const receiveCoin = COINS[transactionReceiverRunOptions.coinType];
             const sendCoin = COINS[transactionSenderRunOptions.coinType];
 
