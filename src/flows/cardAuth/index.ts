@@ -1,5 +1,3 @@
-import { PacketVersionMap } from '@cypherock/communication';
-
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
 
@@ -34,104 +32,6 @@ enum VERIFY_CARD_FLOW {
 export class CardAuthenticator extends CyFlow {
   constructor() {
     super();
-  }
-
-  async runLegacy({
-    connection,
-    firmwareVersion,
-    cardNumber = '00',
-    isTestApp = false,
-    email,
-    cysyncVersion,
-    grouped,
-    sessionId
-  }: CardAuthenticatorRunOptions) {
-    await connection.sendData(70, cardNumber);
-
-    const acceptedRequest = await connection.receiveData([70], 30000);
-    if (acceptedRequest.data === '00') {
-      this.emit('acceptedRequest', false);
-      throw new ExitFlowError();
-    } else {
-      this.emit('acceptedRequest', true);
-    }
-
-    const receivedHash = await connection.receiveData([13, 70], 90000);
-
-    if (receivedHash.commandType === 70 && receivedHash.data.startsWith('00')) {
-      this.emit('cardError');
-      throw new ExitFlowError();
-    } else if (receivedHash.commandType !== 13) {
-      throw new Error('Invalid command received');
-    }
-
-    const serial = receivedHash.data.slice(128).toUpperCase();
-    const serialSignature = receivedHash.data.slice(0, 128);
-    this.emit('serialSigned', true);
-
-    logger.info('Serial number and signature', {
-      serial,
-      serialSignature
-    });
-
-    const challenge = await verifySerialSignature(
-      serial,
-      serialSignature,
-      sha256(serial)
-    );
-
-    if (!challenge) {
-      this.emit('verified', false);
-      await connection.sendData(42, '00');
-      throw new ExitFlowError();
-    }
-
-    await connection.sendData(16, challenge);
-
-    const challengeHash = await connection.receiveData([17, 70], 90000);
-
-    if (challengeHash.commandType === 70) {
-      this.emit('cardError');
-      throw new ExitFlowError();
-    } else if (challengeHash.commandType !== 17) {
-      throw new Error('Invalid command received');
-    }
-
-    this.emit('challengeSigned', true);
-
-    const challengeSignature = challengeHash.data.slice(0, 128);
-    logger.info('Challenge data', {
-      challengeSignature,
-      challengeHash: challengeHash.data
-    });
-
-    const { verified, sessionId: newSessionId } =
-      await verifyChallengeSignature(
-        serial,
-        challengeSignature,
-        challenge,
-        firmwareVersion,
-        email,
-        cysyncVersion,
-        cardNumber !== '04' && grouped,
-        sessionId
-      );
-    if (newSessionId) this.emit('sessionId', newSessionId);
-    this.emit('verified', verified);
-
-    if (verified) {
-      await connection.sendData(42, '01');
-    } else {
-      await connection.sendData(42, '00');
-    }
-
-    if (isTestApp) {
-      const pairing = await connection.receiveData([70], 90000);
-      if (!pairing.data.startsWith('01')) {
-        this.emit('pairingFailed');
-        throw new ExitFlowError();
-      }
-    }
   }
 
   async runOperation({
@@ -287,12 +187,7 @@ export class CardAuthenticator extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        const packetVersion = connection.getPacketVersion();
-        if (packetVersion === PacketVersionMap.v3) {
-          await this.runOperation(params);
-        } else {
-          await this.runLegacy(params);
-        }
+        await this.runOperation(params);
       } else {
         this.emit('notReady');
       }

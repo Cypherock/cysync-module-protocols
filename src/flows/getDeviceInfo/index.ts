@@ -86,6 +86,35 @@ export class GetDeviceInfo extends CyFlow {
     const firmwareV = (firmwareVersion + '').toLowerCase();
     this.emit('firmwareVersion', firmwareV);
 
+    // fetch coinList before throwing any errors
+    let coinList = defaultCoinList(sdkVersion);
+    if (
+      isAuthenticated === '01' &&
+      isFeatureEnabled(FeatureName.GetCoinListFromDevice, sdkVersion)
+    ) {
+      logger.info('Getting CoinList Details');
+
+      sequenceNumber = connection.getNewSequenceNumber();
+      await connection.sendCommand({
+        commandType: 99,
+        data: '00',
+        sequenceNumber
+      });
+
+      const coinData = await connection.waitForCommandOutput({
+        expectedCommandTypes: [99],
+        sequenceNumber,
+        onStatus: () => {}
+      });
+
+      const rawCoinListDetails = coinData.data;
+
+      coinList = extractCoinListDetails(rawCoinListDetails);
+    }
+
+    logger.info('CoinList Details', { coinList });
+    this.emit('coinList', coinList);
+
     if (isAuthenticated === '00') {
       this.emit('auth', false);
       throw new ExitFlowError();
@@ -113,31 +142,6 @@ export class GetDeviceInfo extends CyFlow {
       this.emit('lastAuth', false);
       this.emit('auth', false);
     }
-
-    let coinList = defaultCoinList(sdkVersion);
-    if (isFeatureEnabled(FeatureName.GetCoinListFromDevice, sdkVersion)) {
-      logger.info('Getting CoinList Details');
-
-      sequenceNumber = connection.getNewSequenceNumber();
-      await connection.sendCommand({
-        commandType: 99,
-        data: '00',
-        sequenceNumber
-      });
-
-      const coinData = await connection.waitForCommandOutput({
-        expectedCommandTypes: [99],
-        sequenceNumber,
-        onStatus: () => {}
-      });
-
-      const rawCoinListDetails = coinData.data;
-
-      coinList = extractCoinListDetails(rawCoinListDetails);
-    }
-
-    logger.info('CoinList Details', { coinList });
-    this.emit('coinList', coinList);
   }
 
   async run(params: GetDeviceInfoRunOptions) {
@@ -165,7 +169,7 @@ export class GetDeviceInfo extends CyFlow {
           this.emit('sdkNotSupported', 'device');
         }
 
-        throw new Error('SDK not supported');
+        throw new ExitFlowError();
       }
 
       const packetVersion = connection.getPacketVersion();

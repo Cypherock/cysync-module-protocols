@@ -1,89 +1,78 @@
 import {
-  BtcCoinData,
-  CoinData,
-  COINS,
   EthCoinData,
-  FeatureName,
-  hexToAscii,
-  intToUintByte,
-  isFeatureEnabled
+  NearCoinData,
+  SolanaCoinData
 } from '@cypherock/communication';
-import { Coin } from '@cypherock/database';
-
-import { FlowError, FlowErrorType } from '../flowError';
+import { BtcCoinData, COINS, hexToAscii } from '@cypherock/communication';
+import { Account, AccountDB } from '@cypherock/database';
+import {
+  BitcoinWallet,
+  EthereumWallet,
+  NearWallet,
+  SolanaWallet
+} from '@cypherock/wallet';
 
 export const formatCoinsForDB = async (
   walletId: string,
   xpubRaw: string,
-  coinTypes: any
-): Promise<Coin[]> => {
-  const coins: Coin[] = [];
+  selectedCoin: { accountIndex: number; accountType: string; id: string }
+): Promise<Account> => {
   let sliceIndex = 0;
-  for (let i = 0; i < coinTypes.length; i++) {
-    const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-    let z;
-    sliceIndex += 224;
+  const x = xpubRaw.slice(sliceIndex, sliceIndex + 222);
+  sliceIndex += 224;
 
-    const coinData = COINS[coinTypes[i]];
-    if (coinData instanceof BtcCoinData && coinData.hasSegwit) {
-      z = xpubRaw.slice(sliceIndex, sliceIndex + 222);
-      sliceIndex += 224;
-    }
+  const coinData = COINS[selectedCoin.id];
 
-    const accountXpub = hexToAscii(x);
-    let accountZpub;
+  const accountXpub = hexToAscii(x);
 
-    if (z) {
-      accountZpub = hexToAscii(z);
-    }
-
-    const coin: Coin = {
-      totalBalance: '0',
-      totalUnconfirmedBalance: '0',
-      xpubBalance: '0',
-      xpubUnconfirmedBalance: '0',
-      slug: coinTypes[i],
-      walletId,
-      xpub: accountXpub,
-      zpub: accountZpub,
-      price: 0,
-      priceLastUpdatedAt: undefined
-    };
-    coins.push(coin);
-  }
-  return coins;
+  const account: Account = {
+    name: '',
+    accountId: '',
+    accountIndex: selectedCoin.accountIndex,
+    coinId: coinData.id,
+    accountType: selectedCoin.accountType,
+    totalBalance: '0',
+    totalUnconfirmedBalance: '0',
+    walletId,
+    xpub: accountXpub
+  };
+  account.accountId = AccountDB.buildAccountIndex(account);
+  account.name = AccountDB.createAccountName(account);
+  return account;
 };
 
-export const createCoinIndexes = (
-  sdkVersion: string,
-  selectedCoins: string[]
+export const createCoinIndex = (
+  _sdkVersion: string,
+  selectedCoin: { accountIndex: number; accountType: string; id: string }
 ) => {
-  const coinLength = intToUintByte(selectedCoins.length, 8);
-  const coinIndexList = [];
-  const chainIndexList = [];
+  const coin = COINS[selectedCoin.id];
 
-  for (const elem of selectedCoins) {
-    const coin = COINS[elem];
-
-    if (!(coin instanceof CoinData)) {
-      throw new FlowError(FlowErrorType.ADD_COIN_UNKNOWN_ASSET, elem);
-    }
-
-    const coinIndex = coin.coinIndex;
-    coinIndexList.push(coinIndex);
-
-    const longChainId = isFeatureEnabled(
-      FeatureName.EvmLongChainId,
-      sdkVersion
+  if (coin instanceof BtcCoinData) {
+    return BitcoinWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType,
+      coin.coinIndex
     );
-    let chainIndex = longChainId ? '0000000000000000' : '00';
-
-    if (coin instanceof EthCoinData) {
-      chainIndex = intToUintByte(coin.chain, longChainId ? 64 : 8);
-    }
-
-    chainIndexList.push(chainIndex);
+  }
+  if (coin instanceof EthCoinData) {
+    return EthereumWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType,
+      coin.chain
+    );
+  }
+  if (coin instanceof NearCoinData) {
+    return NearWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType
+    );
+  }
+  if (coin instanceof SolanaCoinData) {
+    return SolanaWallet.getDerivationPath(
+      selectedCoin.accountIndex,
+      selectedCoin.accountType
+    );
   }
 
-  return coinLength + coinIndexList.join('') + chainIndexList.join('');
+  throw new Error('Invalid coin type: ' + selectedCoin.id);
 };

@@ -1,5 +1,3 @@
-import { PacketVersionMap } from '@cypherock/communication';
-
 import { commandHandler76 } from '../../handlers';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
@@ -25,27 +23,6 @@ export class WalletAdder extends CyFlow {
    */
   constructor() {
     super();
-  }
-
-  private async runLegacy({ connection }: WalletAdderRunOptions) {
-    await connection.sendData(43, '00');
-
-    const data = await connection.receiveData([44, 76], 30000);
-    if (data.commandType === 76) {
-      commandHandler76(data, this);
-    }
-
-    const rawWalletDetails = data.data;
-    if (rawWalletDetails === '00') {
-      this.emit('walletDetails', null);
-      throw new ExitFlowError();
-    }
-
-    const walletDetails = extractWalletDetails(rawWalletDetails);
-    logger.info('Wallet Details', { walletDetails });
-    this.emit('walletDetails', walletDetails);
-
-    await connection.sendData(42, '01');
   }
 
   private async runOperation({ connection }: WalletAdderRunOptions) {
@@ -107,12 +84,7 @@ export class WalletAdder extends CyFlow {
       const ready = await this.deviceReady(connection);
 
       if (ready) {
-        const packetVersion = connection.getPacketVersion();
-        if (packetVersion === PacketVersionMap.v3) {
-          await this.runOperation(params);
-        } else {
-          await this.runLegacy(params);
-        }
+        await this.runOperation(params);
       } else {
         this.emit('notReady');
       }
