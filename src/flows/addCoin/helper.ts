@@ -25,12 +25,39 @@ export const formatCoinsForDB = async (
 
   const accountXpub = hexToAscii(x);
 
+  const params = {
+    accountIndex: selectedCoin.accountIndex,
+    accountType: selectedCoin.accountType,
+    coinIndex: coinData.coinIndex
+  };
+
+  let path = '';
+
+  if (coinData instanceof BtcCoinData) {
+    path = BitcoinWallet.getDerivationPath(params);
+  } else if (coinData instanceof EthCoinData) {
+    path = EthereumWallet.getDerivationPath({
+      ...params,
+      chainId: coinData.chain
+    });
+  } else if (coinData instanceof NearCoinData) {
+    path = NearWallet.getDerivationPath({
+      ...params,
+      addressIndex: selectedCoin.accountIndex
+    });
+  } else if (coinData instanceof SolanaCoinData) {
+    path = SolanaWallet.getDerivationPath(params);
+  } else {
+    throw new Error('Invalid coin type: ' + selectedCoin.id);
+  }
+
   const account: Account = {
     name: '',
     accountId: '',
     accountIndex: selectedCoin.accountIndex,
     coinId: coinData.id,
     accountType: selectedCoin.accountType,
+    derivationPath: path,
     totalBalance: '0',
     totalUnconfirmedBalance: '0',
     walletId,
@@ -47,31 +74,28 @@ export const createCoinIndex = (
 ) => {
   const coin = COINS[selectedCoin.id];
 
+  const params = {
+    accountIndex: selectedCoin.accountIndex,
+    accountType: selectedCoin.accountType,
+    coinIndex: coin.coinIndex
+  };
   if (coin instanceof BtcCoinData) {
-    return BitcoinWallet.getDerivationPath(
-      selectedCoin.accountIndex,
-      selectedCoin.accountType,
-      coin.coinIndex
-    );
+    return BitcoinWallet.getProtocolDerivationPath(params);
   }
   if (coin instanceof EthCoinData) {
-    return EthereumWallet.getDerivationPath(
-      selectedCoin.accountIndex,
-      selectedCoin.accountType,
-      coin.chain
-    );
+    return EthereumWallet.getProtocolDerivationPath({
+      ...params,
+      chainId: coin.chain
+    });
   }
   if (coin instanceof NearCoinData) {
-    return NearWallet.getDerivationPath(
-      selectedCoin.accountIndex,
-      selectedCoin.accountType
-    );
+    return NearWallet.getProtocolDerivationPath({
+      ...params,
+      addressIndex: selectedCoin.accountIndex
+    });
   }
   if (coin instanceof SolanaCoinData) {
-    return SolanaWallet.getDerivationPath(
-      selectedCoin.accountIndex,
-      selectedCoin.accountType
-    );
+    return SolanaWallet.getProtocolDerivationPath(params);
   }
 
   throw new Error('Invalid coin type: ' + selectedCoin.id);
