@@ -34,17 +34,21 @@ export const verifyChallengeSignature = async (
   signature: string,
   challenge: string,
   firmwareVersion: string,
-  _email?: string,
-  _cysyncVersion?: string,
-  _onlyFailure?: boolean,
-  _sessionId?: string
+  email?: string,
+  cysyncVersion?: string,
+  onlyFailure?: boolean,
+  sessionId?: string
 ) => {
   const res = await deviceServer
     .challenge({
       serial,
       signature,
       challenge,
-      firmwareVersion
+      firmwareVersion,
+      email,
+      cysyncVersion,
+      onlyFailure,
+      sessionId
     })
     .request();
 

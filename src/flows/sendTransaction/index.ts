@@ -468,28 +468,24 @@ export class TransactionSender extends CyFlow {
         sequenceNumber
       });
 
-      if (onlySignature) {
-        this.emit('signature', signedTxn.data);
-      } else {
-        const signedTxnNear = wallet.getSignedTransaction(
-          unsignedTransaction,
-          signedTxn.data
-        );
+      const signedTxnNear = wallet.getSignedTransaction(
+        unsignedTransaction,
+        signedTxn.data
+      );
 
-        try {
-          const isVerified = await wallet.verifySignedTxn(signedTxnNear);
-          this.emit('signatureVerify', { isVerified, index: 0 });
-        } catch (error) {
-          this.emit('signatureVerify', {
-            isVerified: false,
-            index: -1,
-            error
-          });
-        }
-
-        logger.info('Signed txn', { signedTxnNear });
-        this.emit('signedTxn', signedTxnNear);
+      try {
+        const isVerified = await wallet.verifySignedTxn(signedTxnNear);
+        this.emit('signatureVerify', { isVerified, index: 0 });
+      } catch (error) {
+        this.emit('signatureVerify', {
+          isVerified: false,
+          index: -1,
+          error
+        });
       }
+
+      logger.info('Signed txn', { signedTxnNear });
+      this.emit('signedTxn', signedTxnNear);
     } else if (wallet instanceof SolanaWallet) {
       if (!(coin instanceof SolanaCoinData)) {
         throw new Error('Solana Wallet found, but coin is not Solana.');
@@ -542,29 +538,25 @@ export class TransactionSender extends CyFlow {
         sequenceNumber
       });
 
-      if (onlySignature) {
-        this.emit('signature', signedTxn.data);
-      } else {
-        const signedTxnSolana = wallet.getSignedTransaction(
-          unsignedTransaction,
-          signedTxn.data,
-          latestBlockhash
-        );
+      const signedTxnSolana = wallet.getSignedTransaction(
+        unsignedTransaction,
+        signedTxn.data,
+        latestBlockhash
+      );
 
-        try {
-          const isVerified = await wallet.verifySignedTxn(signedTxnSolana);
-          this.emit('signatureVerify', { isVerified, index: 0 });
-        } catch (error) {
-          this.emit('signatureVerify', {
-            isVerified: false,
-            index: -1,
-            error
-          });
-        }
-
-        logger.info('Signed txn', { signedTxnSolana });
-        this.emit('signedTxn', signedTxnSolana);
+      try {
+        const isVerified = await wallet.verifySignedTxn(signedTxnSolana);
+        this.emit('signatureVerify', { isVerified, index: 0 });
+      } catch (error) {
+        this.emit('signatureVerify', {
+          isVerified: false,
+          index: -1,
+          error
+        });
       }
+
+      logger.info('Signed txn', { signedTxnSolana });
+      this.emit('signedTxn', signedTxnSolana);
     } else {
       const inputSignatures: string[] = [];
       for (const _ of txnInfo.inputs) {
