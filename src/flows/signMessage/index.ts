@@ -9,7 +9,6 @@ import { EthereumWallet } from '@cypherock/wallet';
 import { commandHandler76 } from '../../handlers';
 import { logger } from '../../utils';
 import { CyFlow, CyFlowRunOptions, ExitFlowError } from '../index';
-import { SEND_TRANSACTION_STATUS_ETH } from '../sendTransaction';
 
 export interface SignMessageRunOptions extends CyFlowRunOptions {
   walletId: string;
@@ -30,6 +29,22 @@ interface RunParams extends SignMessageRunOptions {
   wallet: EthereumWallet;
 }
 
+enum SIGN_MESSAGE_STATUS_ETH {
+  SIGN_MSG_VERIFY_COIN_ETH = 1,
+  SIGN_MSG_RAW_MSG_WAIT_SCREEN_ETH,
+  SIGN_MSG_DISPLAY_INFO_ETH,
+  SIGN_MSG_CHECK_PASSPHRASE_ETH,
+  SIGN_MSG_ENTER_PASSPHRASE_ETH,
+  SIGN_MSG_CONFIRM_PASSPHRASE_ETH,
+  SIGN_MSG_CHECK_PIN_ETH,
+  SIGN_MSG_ENTER_PIN_ETH,
+  SIGN_MSG_TAP_CARD_ETH,
+  SIGN_MSG_TAP_CARD_SEND_CMD_ETH,
+  SIGN_MSG_READ_DEVICE_SHARE_ETH,
+  SIGN_MSG_SIGN_TXN_ETH,
+  SIGN_MSG_WAITING_SCREEN_ETH,
+  SIGN_MSG_FINAL_SCREEN_ETH
+}
 export class SignMessage extends CyFlow {
   constructor() {
     super();
@@ -71,15 +86,15 @@ export class SignMessage extends CyFlow {
     let cardTapState = 0;
 
     const requestAcceptedCmdStatus =
-      SEND_TRANSACTION_STATUS_ETH.SEND_TXN_VERIFY_COIN_ETH;
+      SIGN_MESSAGE_STATUS_ETH.SIGN_MSG_VERIFY_COIN_ETH;
     const recipientVerifiedCmdStatus =
-      SEND_TRANSACTION_STATUS_ETH.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_ETH;
+      SIGN_MESSAGE_STATUS_ETH.SIGN_MSG_CHECK_PASSPHRASE_ETH;
     const passphraseEnteredCmdStatus =
-      SEND_TRANSACTION_STATUS_ETH.SEND_TXN_ENTER_PIN_ETH;
+      SIGN_MESSAGE_STATUS_ETH.SIGN_MSG_ENTER_PIN_ETH;
     const pinEnteredCmdStatus =
-      SEND_TRANSACTION_STATUS_ETH.SEND_TXN_TAP_CARD_SEND_CMD_ETH;
+      SIGN_MESSAGE_STATUS_ETH.SIGN_MSG_TAP_CARD_SEND_CMD_ETH;
     const cardTapCmdStatus =
-      SEND_TRANSACTION_STATUS_ETH.SEND_TXN_TAP_CARD_SEND_CMD_ETH;
+      SIGN_MESSAGE_STATUS_ETH.SIGN_MSG_TAP_CARD_SEND_CMD_ETH;
 
     const onStatus = (status: StatusData) => {
       if (
