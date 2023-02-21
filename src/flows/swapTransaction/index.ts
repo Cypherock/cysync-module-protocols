@@ -40,6 +40,7 @@ export interface TransactionSwapperRunOptions extends CyFlowRunOptions {
   changellyFee: string;
   transactionReceiverRunOptions: TransactionReceiverRunOptions;
   transactionSenderRunOptions: TransactionSenderRunOptions;
+  deviceSerialId: string;
 }
 
 export enum SWAP_TRANSACTION_EVENTS {
@@ -95,21 +96,27 @@ const createSwapTransaction = async (
   from: string,
   to: string,
   amount: string,
-  address: string
+  address: string,
+  serial: string
 ) => {
+  await Server.session.createSession({deviceSerial: serial}).request();
+
   const { data } = await Server.swap
     .createTransaction({
       walletId,
       from,
       to,
       amount,
-      address
+      address,
+      serial
     })
     .request();
 
   return {
-    id: data.message.result.id,
-    payinAddress: data.message.result.payinAddress
+    id: data.message.id,
+    payinAddress: data.message.payinAddress,
+    signature: data.message.signature,
+    sessionId: data.message.sessionId,
   };
 };
 
@@ -133,8 +140,10 @@ export class TransactionSwapper extends CyFlow {
     transactionReceiverRunOptions,
     transactionSenderRunOptions,
     receiveAddress,
-    receiveAddressPath
+    receiveAddressPath,
+    deviceSerialId
   }: RunParams) {
+
     const receiveCoin = COINS[transactionReceiverRunOptions.coinId];
 
     if (!receiveCoin) {
@@ -173,7 +182,8 @@ export class TransactionSwapper extends CyFlow {
           contractAddress: undefined,
           contractAbbr: undefined
         };
-      // const { network } = sendCoin;
+      
+      const { network } = sendCoin;
       sendWallet = new EthereumWallet(
         transactionSenderRunOptions.accountIndex,
         transactionSenderRunOptions.xpub,
@@ -183,11 +193,11 @@ export class TransactionSwapper extends CyFlow {
       // if (transactionSenderRunOptions.fee) {
       //   feeRate = transactionSenderRunOptions.fee;
       // } else {
-      //   logger.info(`Fetching optimal fees from the internet.`);
-      //   const res = await Server.eth.transaction
-      //     .getFees({ network, responseType: 'v2' })
-      //     .request();
-      //   feeRate = Math.round(res.data.fees / 1000000000);
+        logger.info(`Fetching optimal fees from the internet.`);
+        const res = await Server.eth.transaction
+          .getFees({ network, responseType: 'v2' })
+          .request();
+        feeRate = Math.round(res.data.fees / 1000000000);
       // }
 
       metaData = await sendWallet.generateMetaData(
@@ -229,16 +239,13 @@ export class TransactionSwapper extends CyFlow {
         transactionDb: transactionSenderRunOptions.transactionDB
       });
 
-      if (transactionSenderRunOptions.fee) {
-        feeRate = transactionSenderRunOptions.fee;
-      } else {
         logger.info(`Fetching optimal fees from the internet.`);
         const res = await Server.bitcoin.transaction
           .getFees({ coinType: sendCoin.abbr })
           .request();
         // divide by 1024 to make fees in sat/byte from sat/kilobyte
         feeRate = Math.round(res.data.medium_fee_per_kb / 1024);
-      }
+
 
       const tempValue = await sendWallet.generateMetaData(
         transactionSenderRunOptions.outputList,
@@ -464,7 +471,7 @@ export class TransactionSwapper extends CyFlow {
         addressLength + 64 + 128 + 14 + 46
       );
 
-      const { verificationResponse } = await Server.swap
+      const verificationResponse = await Server.swap
         .verifyAddress({
           address: addressHex,
           serial: deviceSerial,
@@ -474,11 +481,11 @@ export class TransactionSwapper extends CyFlow {
         })
         .request();
 
-      if (verificationResponse.status !== 1 || !verificationResponse.verified) {
+      if (verificationResponse.data.status !== 1 || !verificationResponse.data.verified) {
         throw new Error('Address verification failed');
       }
 
-      addressVerified = verificationResponse.verified;
+      addressVerified = verificationResponse.data.verified;
 
       let address = '';
 
@@ -498,18 +505,48 @@ export class TransactionSwapper extends CyFlow {
       this.emit(SWAP_TRANSACTION_EVENTS.RECEIVE_ADDRESS_VERIFIED, address);
     }
 
-    const { id, payinAddress } = await createSwapTransaction(
+    const swapTransactionDetails = await createSwapTransaction(
       transactionReceiverRunOptions.walletId,
       COINS[transactionSenderRunOptions.coinId].abbr,
       COINS[transactionReceiverRunOptions.coinId].abbr,
       sendAmount,
-      receiveAddress
+      receiveAddress,
+      deviceSerialId
     );
 
-    const changellyAddress = payinAddress;
+    console.table({
+      swapTransactionDetails
+    });
+
+    const changellyAddress = swapTransactionDetails.payinAddress;
+    // const changellyAddress = "0x773808a1f19952d5af533b7ad788dbec5b153ad3";
+    const sessionId = swapTransactionDetails.sessionId;
+    const signature = swapTransactionDetails.signature;
+
+
+
+        // TODO: CREATE PAYLOAD AND SIGN
+    const receiveAddressVerificationPayload = sessionId + changellyAddress.slice(2) + signature;
+
+    logger.info(
+      "SwapTransactionSender: receive address verification: ", {sessionId, changellyAddress, signature});
+    
+    sequenceNumber = connection.getNewSequenceNumber();
+    await connection.sendCommand({
+      commandType: 68,
+      data: receiveAddressVerificationPayload,
+      sequenceNumber
+    });
+
+    const receiveAddressVerified = await connection.waitForCommandOutput({
+      sequenceNumber,
+      expectedCommandTypes: [69],
+      onStatus: () => {
+      }
+    });
 
     this.emit(SWAP_TRANSACTION_EVENTS.CHANGELLY_ADDRESS, changellyAddress);
-    this.emit(SWAP_TRANSACTION_EVENTS.CHANGELLY_ID, id);
+    this.emit(SWAP_TRANSACTION_EVENTS.CHANGELLY_ID, swapTransactionDetails.id);
 
     sequenceNumber = connection.getNewSequenceNumber();
     await connection.sendCommand({
@@ -543,15 +580,12 @@ export class TransactionSwapper extends CyFlow {
         sendCoin
       );
 
-      if (transactionSenderRunOptions.fee) {
-        feeRate = transactionSenderRunOptions.fee;
-      } else {
+
         logger.info(`Fetching optimal fees from the internet.`);
         const res = await Server.eth.transaction
           .getFees({ network, responseType: 'v2' })
           .request();
         feeRate = Math.round(res.data.fees / 1000000000);
-      }
 
       let amount: BigNumber;
       let txFee: BigNumber;
@@ -585,15 +619,11 @@ export class TransactionSwapper extends CyFlow {
       sendWallet instanceof NearWallet
     ) {
       const { network } = sendCoin;
-      if (transactionSenderRunOptions.fee) {
-        feeRate = transactionSenderRunOptions.fee;
-      } else {
         logger.info(`Fetching optimal fees from the internet.`);
         const res = await Server.near.transaction
           .getFees({ network, responseType: 'v2' })
           .request();
         feeRate = res.data.fees;
-      }
 
       totalFees = new BigNumber(feeRate)
         .dividedBy(10 ** sendCoin.decimal)
@@ -616,15 +646,12 @@ export class TransactionSwapper extends CyFlow {
       sendWallet instanceof SolanaWallet
     ) {
       const { network } = sendCoin;
-      if (transactionSenderRunOptions.fee) {
-        feeRate = transactionSenderRunOptions.fee;
-      } else {
         logger.info(`Fetching optimal fees from the internet.`);
         const res = await Server.solana.transaction
           .getFees({ network })
           .request();
         feeRate = res.data.fees;
-      }
+   
 
       totalFees = new BigNumber(feeRate)
         .dividedBy(10 ** sendCoin.decimal)
@@ -637,16 +664,13 @@ export class TransactionSwapper extends CyFlow {
       );
       ({ txn: unsignedTransaction, inputs, outputs } = txnData);
     } else if (sendWallet instanceof BitcoinWallet) {
-      if (transactionSenderRunOptions.fee) {
-        feeRate = transactionSenderRunOptions.fee;
-      } else {
+
         logger.info(`Fetching optimal fees from the internet.`);
         const res = await Server.bitcoin.transaction
           .getFees({ coinType: sendCoin.abbr })
           .request();
         // divide by 1024 to make fees in sat/byte from sat/kilobyte
         feeRate = Math.round(res.data.medium_fee_per_kb / 1024);
-      }
 
       const tempValue = await sendWallet.generateMetaData(
         transactionSenderRunOptions.outputList,
@@ -654,6 +678,7 @@ export class TransactionSwapper extends CyFlow {
         sdkVersion,
         transactionSenderRunOptions.isSendAll
       );
+
       metaData = tempValue.metaData;
       txnInfo = tempValue;
 
@@ -828,6 +853,7 @@ export class TransactionSwapper extends CyFlow {
     }
 
     sequenceNumber = connection.getNewSequenceNumber();
+
     await connection.sendCommand({
       commandType: 52,
       data: unsignedTransaction,
@@ -1111,7 +1137,8 @@ export class TransactionSwapper extends CyFlow {
       connection,
       sdkVersion,
       transactionReceiverRunOptions,
-      transactionSenderRunOptions
+      transactionSenderRunOptions,
+      deviceSerialId
     } = params;
 
     let flowInterrupted = false;
@@ -1200,7 +1227,8 @@ export class TransactionSwapper extends CyFlow {
         await this.runOperation({
           ...params,
           receiveAddress,
-          receiveAddressPath
+          receiveAddressPath,
+          deviceSerialId
         });
       } else {
         this.emit('notReady');
