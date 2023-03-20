@@ -218,7 +218,7 @@ export class TransactionSender extends CyFlow {
       requestAcceptedCmdStatus =
         SEND_TRANSACTION_STATUS_ETH.SEND_TXN_VERIFY_COIN_ETH;
       recipientVerifiedCmdStatus =
-        SEND_TRANSACTION_STATUS_ETH.SEND_TXN_VERIFY_RECEIPT_ADDRESS_SEND_CMD_ETH;
+        SEND_TRANSACTION_STATUS_ETH.SEND_TXN_ENTER_PASSPHRASE_ETH;
       passphraseEnteredCmdStatus =
         SEND_TRANSACTION_STATUS_ETH.SEND_TXN_ENTER_PIN_ETH;
       pinEnteredCmdStatus =
