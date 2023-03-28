@@ -39,6 +39,7 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
   isSendAll?: boolean;
   data?: {
     gasLimit: number;
+    l1Cost?: string;
     contractAddress?: string;
     contractAbbr?: string;
     subCoinId?: string;
@@ -635,6 +636,7 @@ export class TransactionSender extends CyFlow {
       isSendAll = false,
       data = {
         gasLimit: 21000,
+        l1Cost: '0',
         contractAddress: undefined,
         contractAbbr: undefined,
         contractData: undefined,
@@ -672,8 +674,14 @@ export class TransactionSender extends CyFlow {
           throw new Error('Invalid token or coinId');
         }
 
-        const { gasLimit, contractAddress, contractAbbr, nonce, contractData } =
-          data;
+        const {
+          gasLimit,
+          contractAddress,
+          contractAbbr,
+          nonce,
+          contractData,
+          l1Cost
+        } = data;
         const { network, chain } = coin;
         wallet = new EthereumWallet(accountIndex, xpub, coin);
 
@@ -696,6 +704,7 @@ export class TransactionSender extends CyFlow {
 
         let amount: BigNumber;
         let txFee: BigNumber;
+        let l1Fee: BigNumber;
 
         const unsignedResp = await wallet.generateUnsignedTransaction({
           outputAddress: outputList[0].address,
@@ -706,11 +715,13 @@ export class TransactionSender extends CyFlow {
           isSendAll,
           contractAddress,
           contractData,
-          nonce
+          nonce,
+          l1Cost: l1Cost ?? '0'
         });
         ({
           amount,
           fee: txFee,
+          l1Fee,
           txn: unsignedTransaction,
           inputs,
           outputs
@@ -720,6 +731,10 @@ export class TransactionSender extends CyFlow {
           .toString();
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toString();
+        const totalL1Fees = l1Fee
+          .dividedBy(new BigNumber(coin.multiplier))
+          .toString();
+        this.emit('l1Fees', totalL1Fees);
       } else if (coin instanceof NearCoinData) {
         wallet = new NearWallet(accountIndex, xpub, coin);
         metaData = await wallet.generateMetaData(
@@ -895,6 +910,7 @@ export class TransactionSender extends CyFlow {
         isSendAll,
         data = {
           gasLimit: 21000,
+          l1Cost: '0',
           contractAddress: undefined,
           contractAbbr: undefined,
           subCoinId: undefined
@@ -933,7 +949,8 @@ export class TransactionSender extends CyFlow {
           feeRate,
           gasLimit,
           isSendAll,
-          data.contractAddress
+          data.contractAddress,
+          data.l1Cost
         );
         totalFees = calcData.fees
           .dividedBy(new BigNumber(coin.multiplier))
