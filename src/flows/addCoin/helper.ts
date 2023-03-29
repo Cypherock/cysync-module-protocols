@@ -22,7 +22,7 @@ export const formatCoinsForDB = async (
   sliceIndex += 224;
 
   const coinData = COINS[selectedCoin.id];
-
+  if (!coinData) throw new Error('Invalid coin type: ' + selectedCoin.id);
   const accountXpub = hexToAscii(x);
 
   const params = {
@@ -73,6 +73,7 @@ export const createCoinIndex = (
   selectedCoin: { accountIndex: number; accountType: string; id: string }
 ) => {
   const coin = COINS[selectedCoin.id];
+  if (!coin) throw new Error('Invalid coin type: ' + selectedCoin.id);
 
   const params = {
     accountIndex: selectedCoin.accountIndex,
