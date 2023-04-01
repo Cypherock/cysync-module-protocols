@@ -704,7 +704,6 @@ export class TransactionSender extends CyFlow {
 
         let amount: BigNumber;
         let txFee: BigNumber;
-        let l1Fee: BigNumber;
 
         const unsignedResp = await wallet.generateUnsignedTransaction({
           outputAddress: outputList[0].address,
@@ -721,7 +720,6 @@ export class TransactionSender extends CyFlow {
         ({
           amount,
           fee: txFee,
-          l1Fee,
           txn: unsignedTransaction,
           inputs,
           outputs
@@ -731,10 +729,6 @@ export class TransactionSender extends CyFlow {
           .toString();
 
         totalFees = txFee.dividedBy(new BigNumber(coin.multiplier)).toString();
-        const totalL1Fees = l1Fee
-          .dividedBy(new BigNumber(coin.multiplier))
-          .toString();
-        this.emit('l1Fees', totalL1Fees);
       } else if (coin instanceof NearCoinData) {
         wallet = new NearWallet(accountIndex, xpub, coin);
         metaData = await wallet.generateMetaData(
