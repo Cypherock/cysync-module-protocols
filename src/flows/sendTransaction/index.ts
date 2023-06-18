@@ -46,7 +46,6 @@ export interface TransactionSenderRunOptions extends CyFlowRunOptions {
     contractData?: string;
     nonce?: string;
   };
-  onlySignature?: boolean;
 }
 
 interface RunParams extends TransactionSenderRunOptions {
@@ -171,8 +170,7 @@ export class TransactionSender extends CyFlow {
     wallet,
     txnInfo,
     inputs,
-    coinId,
-    onlySignature
+    coinId
   }: RunParams) {
     const coin = COINS[coinId];
 
@@ -415,29 +413,25 @@ export class TransactionSender extends CyFlow {
         sequenceNumber
       });
 
-      if (onlySignature) {
-        this.emit('signature', signedTxn.data);
-      } else {
-        const signedTxnEth = wallet.getSignedTransaction(
-          unsignedTransaction,
-          signedTxn.data,
-          coin.chain
-        );
+      const signedTxnEth = wallet.getSignedTransaction(
+        unsignedTransaction,
+        signedTxn.data,
+        coin.chain
+      );
 
-        try {
-          const isVerified = await wallet.verifySignedTxn(signedTxnEth);
-          this.emit('signatureVerify', { isVerified, index: 0 });
-        } catch (error) {
-          this.emit('signatureVerify', {
-            isVerified: false,
-            index: -1,
-            error
-          });
-        }
-
-        logger.info('Signed txn', { signedTxnEth });
-        this.emit('signedTxn', signedTxnEth);
+      try {
+        const isVerified = await wallet.verifySignedTxn(signedTxnEth);
+        this.emit('signatureVerify', { isVerified, index: 0 });
+      } catch (error) {
+        this.emit('signatureVerify', {
+          isVerified: false,
+          index: -1,
+          error
+        });
       }
+
+      logger.info('Signed txn', { signedTxnEth });
+      this.emit('signedTxn', signedTxnEth);
     } else if (wallet instanceof NearWallet) {
       if (!(coin instanceof NearCoinData)) {
         throw new Error('Near Wallet found, but coin is not Near.');
